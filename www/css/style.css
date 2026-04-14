@@ -1,0 +1,228 @@
+/* Base Reset & Layout */
+html, body { height: 100dvh; width: 100vw; overflow: hidden; }
+body { -webkit-tap-highlight-color: transparent; }
+
+/* Utility */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.leaflet-control-attribution { display: none; }
+.leaflet-container { background: #f3f4f6; }
+@media (prefers-color-scheme: dark) { .leaflet-container { background: #111827; } }
+
+/* Glassmorphism */
+.glass-hud { 
+    background: rgba(255, 255, 255, 0.9); 
+    backdrop-filter: blur(12px); 
+    border: 1px solid rgba(255,255,255,0.5); 
+}
+@media (prefers-color-scheme: dark) {
+    .glass-hud { 
+        background: rgba(31, 41, 55, 0.9); 
+        border: 1px solid rgba(255,255,255,0.1); 
+        color: white;
+    }
+}
+
+/* Animations */
+.slide-panel { transition: transform 0.35s cubic-bezier(0.19, 1, 0.22, 1); will-change: transform; }
+.scale-in { animation: scaleIn 0.2s ease-out forwards; }
+@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.avatar-bounce { animation: bounce 0.5s cubic-bezier(0.36, 0, 0.66, -0.56) infinite alternate; }
+@keyframes bounce { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
+
+/* Fix for grid collapsing */
+.card-img-height { 
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    display: block;
+} 
+
+.species-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.dark .species-card {
+    background: #1f2937;
+    border-color: rgba(255,255,255,0.05);
+}
+
+.species-card:active {
+    transform: scale(0.96);
+    box-shadow: 0 2px 4px -1px rgba(0,0,0,0.06);
+}
+
+.species-card.locked {
+    filter: grayscale(1) opacity(0.6);
+}
+
+.rarity-badge {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    z-index: 10;
+}
+
+.species-card-info {
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.species-card-title {
+    font-size: 0.875rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #111827;
+}
+
+.dark .species-card-title {
+    color: white;
+}
+
+.species-card-subtitle {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.dark .species-card-subtitle {
+    color: #9ca3af;
+}
+
+/* Wizard Styles */
+.wizard-step {
+    animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.category-btn {
+    display: flex;
+    flex-direction: column;
+    items-center: center;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    border-radius: 1.5rem;
+    background: #f3f4f6;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.dark .category-btn {
+    background: #374151;
+}
+
+.category-btn.active {
+    background: #d1fae5;
+    border-color: #10b981;
+}
+
+.dark .category-btn.active {
+    background: #064e3b;
+    border-color: #10b981;
+}
+@media (min-width: 1024px) {
+    #map {
+        left: 80px; /* Width of the sidebar nav */
+        width: calc(100% - 80px);
+        transition: width 0.35s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+    body.desktop-panel-open #map {
+        width: calc(100% - 80px - 400px);
+    }
+    .slide-panel {
+        width: 400px;
+        right: 0;
+        transform: translateX(400px); /* Hidden off-screen */
+        border-left: 1px solid #e5e7eb;
+        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+        will-change: transform;
+    }
+    .dark .slide-panel {
+        border-left-color: #374151;
+    }
+    .slide-panel.panel-active {
+        transform: translateX(0);
+    }
+    #panels-container {
+        pointer-events: auto;
+    }
+#recenter-btn-container {
+    bottom: calc(var(--spacing-nav) + 1.5rem) !important;
+    right: 1.25rem !important;
+    z-index: 40;
+}
+
+@media (min-width: 1024px) {
+    #recenter-btn-container {
+        bottom: 2rem !important;
+        right: 2rem !important;
+    }
+    body.desktop-panel-open #recenter-btn-container {
+         right: calc(400px + 2rem) !important;
+    }
+}
+
+/* --- Gamification UI Overhaul (Pokémon GO Inspiration) --- */
+.bg-brand {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: inset 0 -3px 0 0 rgba(0,0,0,0.2);
+}
+.btn-gamified {
+    border-radius: 1rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 4px 0 0 rgba(0,0,0,0.1), inset 0 -4px 0 0 rgba(0,0,0,0.2);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+.btn-gamified:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 0 rgba(0,0,0,0.1), inset 0 -2px 0 0 rgba(0,0,0,0.2);
+}
+.card-gamified {
+    border: 3px solid #e5e7eb;
+    border-radius: 1.5rem;
+    box-shadow: 0 8px 15px -3px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.dark .card-gamified {
+    border-color: #374151;
+}
+.card-gamified:active {
+    transform: scale(0.98);
+}
+.pulse-radar {
+    animation: pulseRadar 2s infinite;
+}
+@keyframes pulseRadar {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
