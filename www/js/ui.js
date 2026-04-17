@@ -1,9 +1,106 @@
 export const ui = {
-    editingProfile: false, selectorTarget: null, lastLoggedSpecies: null, fieldGuideView: 'grid',
+    editingProfile: false,
+    selectorTarget: null,
+    lastLoggedSpecies: null,
+    fieldGuideView: 'grid',
+    fieldGuideGridSize: 'comfortable',
+    gridSizePressTimer: null,
+    gridLongPressTriggered: false,
+    suppressGridClick: false,
     avatars: ['🌳', '🦋', '🦉', '🦊', '🐻', '🐝', '🐞', '🐢', '🐍', '🐸', '🐿️', '🦔'],
     
     init(app) {
         this.app = app;
+        this.bindFieldGuideSizeControls();
+    },
+
+    bindFieldGuideSizeControls() {
+        const gridBtn = document.getElementById('grid-view-btn');
+        const menu = document.getElementById('fieldguide-size-menu');
+        if (!gridBtn || !menu) return;
+
+        const startPress = () => {
+            this.clearGridPressTimer();
+            this.gridLongPressTriggered = false;
+            this.gridSizePressTimer = setTimeout(() => {
+                this.gridLongPressTriggered = true;
+                this.suppressGridClick = true;
+                this.openFieldGuideSizeMenu();
+            }, 420);
+        };
+
+        const endPress = () => {
+            this.clearGridPressTimer();
+            if (this.gridLongPressTriggered) {
+                setTimeout(() => { this.suppressGridClick = false; }, 0);
+            }
+        };
+
+        gridBtn.addEventListener('pointerdown', startPress);
+        gridBtn.addEventListener('pointerup', endPress);
+        gridBtn.addEventListener('pointerleave', endPress);
+        gridBtn.addEventListener('pointercancel', endPress);
+        gridBtn.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            this.openFieldGuideSizeMenu();
+        });
+
+        menu.querySelectorAll('.fieldguide-size-opt').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                this.setFieldGuideGridSize(btn.dataset.size);
+                this.closeFieldGuideSizeMenu();
+            });
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!menu.classList.contains('hidden') && !event.target.closest('#fieldguide-view-controls')) {
+                this.closeFieldGuideSizeMenu();
+            }
+        });
+
+        this.updateFieldGuideSizeMenuState();
+    },
+
+    clearGridPressTimer() {
+        if (this.gridSizePressTimer) {
+            clearTimeout(this.gridSizePressTimer);
+            this.gridSizePressTimer = null;
+        }
+    },
+
+    openFieldGuideSizeMenu() {
+        const menu = document.getElementById('fieldguide-size-menu');
+        if (!menu) return;
+        this.updateFieldGuideSizeMenuState();
+        menu.classList.remove('hidden');
+    },
+
+    closeFieldGuideSizeMenu() {
+        const menu = document.getElementById('fieldguide-size-menu');
+        if (!menu) return;
+        menu.classList.add('hidden');
+    },
+
+    setFieldGuideGridSize(size) {
+        if (!['compact', 'comfortable', 'immersive'].includes(size)) return;
+        this.fieldGuideGridSize = size;
+        this.applyFieldGuideSizeClass();
+        this.updateFieldGuideSizeMenuState();
+    },
+
+    updateFieldGuideSizeMenuState() {
+        const menu = document.getElementById('fieldguide-size-menu');
+        if (!menu) return;
+        menu.querySelectorAll('.fieldguide-size-opt').forEach((opt) => {
+            opt.classList.toggle('active', opt.dataset.size === this.fieldGuideGridSize);
+        });
+    },
+
+    applyFieldGuideSizeClass() {
+        const gridBody = document.getElementById('fieldguide-body');
+        if (!gridBody) return;
+        gridBody.classList.remove('fg-size-compact', 'fg-size-comfortable', 'fg-size-immersive');
+        gridBody.classList.add(`fg-size-${this.fieldGuideGridSize}`);
     },
 
     openPanel(id) {
@@ -27,7 +124,7 @@ export const ui = {
             
             if (id === 'panel-fieldGuide') this.renderFieldGuide();
             if (id === 'panel-inventory') this.renderInventory();
-            if (id === 'panel-rewards') this.renderRewards();
+            if (id === 'panel-rewards') this.renderSanctuary();
             if (id === 'panel-shop') this.renderShop();
             if (id === 'panel-achievements') this.renderAchievements();
             if (id === 'panel-social') {
@@ -47,6 +144,8 @@ export const ui = {
                 if (this.app.map && this.app.map.map) this.app.map.map.invalidateSize();
             }, 350);
         }
+
+        document.body.classList.toggle('panel-open', id !== 'map');
         
         const recenterBtn = document.getElementById('recenter-btn-container');
         if (recenterBtn) {
@@ -115,6 +214,11 @@ export const ui = {
     },
 
     setFieldGuideView(view) {
+        if (this.suppressGridClick) {
+            this.suppressGridClick = false;
+            return;
+        }
+
         this.fieldGuideView = view;
         const gridViewBtn = document.getElementById('grid-view-btn');
         const listViewBtn = document.getElementById('list-view-btn');
@@ -124,13 +228,19 @@ export const ui = {
         if (view === 'grid') {
             gridViewBtn.classList.add('bg-brand', 'text-white');
             listViewBtn.classList.remove('bg-brand', 'text-white');
+            gridBody.classList.remove('fg-list');
+            gridBody.classList.add('fg-grid');
             gridBody.classList.remove('grid-cols-1');
             gridBody.classList.add('grid-cols-2', 'sm:grid-cols-2', 'md:grid-cols-3', 'lg:grid-cols-4');
+            this.applyFieldGuideSizeClass();
         } else { // list
             listViewBtn.classList.add('bg-brand', 'text-white');
             gridViewBtn.classList.remove('bg-brand', 'text-white');
+            gridBody.classList.remove('fg-grid', 'fg-size-compact', 'fg-size-comfortable', 'fg-size-immersive');
+            gridBody.classList.add('fg-list');
             gridBody.classList.remove('grid-cols-2', 'sm:grid-cols-2', 'md:grid-cols-3', 'lg:grid-cols-4');
             gridBody.classList.add('grid-cols-1');
+            this.closeFieldGuideSizeMenu();
         }
         this.renderFieldGuide(true);
     },
@@ -361,11 +471,65 @@ export const ui = {
     },
 
     async renderInventory() {
-        const owned = this.app.localSpecies.filter(s => this.app.state.speciesData[s.id]);
+        const logs = Array.isArray(this.app.state.sightingsLog) ? this.app.state.sightingsLog : [];
         const invBadge = document.getElementById('inventory-count-badge');
-        if (invBadge) invBadge.innerText = `${owned.length} Found`;
-        this.renderTabs('inventory-tabs', owned, () => this.renderGrid('inventory-body', owned, 'inventory-search', 'inventory-tabs'));
-        this.renderGrid('inventory-body', owned, 'inventory-search', 'inventory-tabs');
+        if (invBadge) invBadge.innerText = `${logs.length} Entries`;
+
+        const tabs = document.getElementById('inventory-tabs');
+        const searchInput = document.getElementById('inventory-search');
+        const body = document.getElementById('inventory-body');
+        if (!tabs || !body) return;
+
+        const habitats = ['All', ...new Set(logs.map((entry) => entry.habitat).filter(Boolean))];
+        const active = tabs.querySelector('button.bg-brand')?.dataset.h || 'All';
+        tabs.innerHTML = habitats.map((h) => `<button data-h="${h}" class="px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap border transition-colors ${h === active ? 'bg-brand text-white border-brand' : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700'}">${h}</button>`).join('');
+
+        const filterAndRender = () => {
+            const habitat = tabs.querySelector('button.bg-brand')?.dataset.h || 'All';
+            const term = (searchInput?.value || '').toLowerCase();
+            const filtered = logs.filter((entry) => {
+                const habitatOk = habitat === 'All' || entry.habitat === habitat;
+                const text = `${entry.speciesName} ${entry.notes || ''} ${entry.weather || ''}`.toLowerCase();
+                return habitatOk && text.includes(term);
+            });
+
+            if (!filtered.length) {
+                body.innerHTML = '<div class="col-span-full rounded-3xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center text-gray-400 font-medium">No journal entries match this filter.</div>';
+                return;
+            }
+
+            body.innerHTML = filtered.map((entry) => {
+                const dateText = new Date(entry.timestamp).toLocaleString();
+                const image = entry.imageUri ? `<img src="${entry.imageUri}" class="w-20 h-20 rounded-2xl object-cover shrink-0 border border-gray-100 dark:border-gray-700" alt="${entry.speciesName}">` : '<div class="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 shrink-0 flex items-center justify-center text-gray-400">📷</div>';
+                return `
+                    <article class="bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex gap-3 items-start">
+                        ${image}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <h4 class="font-black text-base dark:text-white truncate">${entry.speciesName}</h4>
+                                <span class="text-[10px] font-bold text-gray-400 whitespace-nowrap">${entry.qty}x</span>
+                            </div>
+                            <div class="text-[10px] font-bold text-brand uppercase tracking-wider">${entry.habitat || 'General'} • ${entry.weather || 'Unknown'}</div>
+                            <p class="text-xs text-gray-500 mt-1 line-clamp-2">${entry.notes || 'No notes recorded.'}</p>
+                            <div class="mt-2 flex items-center justify-between text-[10px] text-gray-400">
+                                <span>${dateText}</span>
+                                <span>+${entry.xp} XP • +${entry.seeds} 🌰</span>
+                            </div>
+                        </div>
+                    </article>`;
+            }).join('');
+        };
+
+        tabs.querySelectorAll('button').forEach((btn) => {
+            btn.onclick = () => {
+                tabs.querySelectorAll('button').forEach((chip) => chip.className = chip.className.replace('bg-brand text-white border-brand', 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700'));
+                btn.className = btn.className.replace('bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700', 'bg-brand text-white border-brand');
+                filterAndRender();
+            };
+        });
+
+        if (searchInput) searchInput.oninput = filterAndRender;
+        filterAndRender();
     },
 
     async openDetail(id) {
@@ -533,45 +697,75 @@ export const ui = {
         const body = document.getElementById('log-sighting-body');
         if (!body) return;
         body.innerHTML = `
-            <form id="log-form" class="space-y-6">
-                <!-- Image Upload Area -->
+            <form id="log-form" class="space-y-5">
+                <div class="bg-brand-light/40 dark:bg-brand-dark/20 p-4 rounded-2xl border border-brand/15">
+                    <h3 class="font-black text-base text-brand-dark dark:text-brand-light">Document a Wildlife Sighting</h3>
+                    <p class="text-xs text-gray-500 mt-1">Capture one clear subject, add context, and grow your sanctuary economy.</p>
+                </div>
+
                 <div id="image-upload-area" class="relative w-full aspect-video bg-gray-100 dark:bg-gray-800 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col items-center justify-center cursor-pointer active:scale-[0.98] transition-all" onclick="app.game.captureImage()">
                     <img id="sighting-image-preview" class="absolute inset-0 w-full h-full object-cover hidden">
                     <div id="sighting-image-placeholder" class="text-center p-6">
                         <div class="w-16 h-16 bg-brand-light dark:bg-brand-dark/20 text-brand rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
                             <span class="material-symbols-rounded text-3xl">add_a_photo</span>
                         </div>
-                        <p class="font-bold text-gray-700 dark:text-gray-300">Snap a Photo</p>
-                        <p class="text-xs text-gray-400 mt-1 font-medium">Required for verification</p>
+                        <p class="font-bold text-gray-700 dark:text-gray-300">Capture Subject Photo</p>
+                        <p class="text-xs text-gray-400 mt-1 font-medium">Required for verification and journal timeline</p>
                     </div>
                 </div>
                 <input type="file" id="file-upload-input" class="hidden" accept="image/*" onchange="const reader = new FileReader(); reader.onload = (e) => app.game.updateImagePreview(e.target.result); reader.readAsDataURL(this.files[0]);">
 
-                <!-- Location Info -->
                 <div class="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 rounded-2xl flex items-center justify-between border border-gray-100 dark:border-gray-700">
                     <div class="flex items-center gap-2">
                         <span class="material-symbols-rounded text-brand text-lg">location_on</span>
-                        <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Current Location</span>
+                        <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Documented Position</span>
                     </div>
                     <span class="text-[10px] font-mono text-gray-400">${this.app.map.pos.lat?.toFixed(4) || '??'}, ${this.app.map.pos.lng?.toFixed(4) || '??'}</span>
                 </div>
 
-                <!-- Species Entries -->
                 <div class="space-y-3">
-                    <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest px-1">What did you see?</h3>
-                    <div id="log-entries" class="space-y-3"></div>
-                    <button type="button" onclick="app.game.addEntry()" class="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 font-bold py-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                        <span class="material-symbols-rounded">add</span> Add Another Species
+                    <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Who did you document?</h3>
+                    <button type="button" id="primary-species-btn" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-400 font-bold p-3 rounded-xl text-sm text-center active:scale-95 transition-transform truncate" onclick="app.ui.openSpeciesSelector(this)">
+                        Select Animal
                     </button>
                 </div>
 
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Count
+                        <input id="sighting-count" type="number" min="1" value="1" class="mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-base font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand" />
+                    </label>
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Weather
+                        <select id="sighting-weather" class="mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm font-semibold dark:text-white outline-none focus:ring-2 focus:ring-brand">
+                            <option>Clear</option>
+                            <option>Cloudy</option>
+                            <option>Rainy</option>
+                            <option>Windy</option>
+                            <option>Unknown</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block">Habitat
+                    <select id="sighting-habitat" class="mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm font-semibold dark:text-white outline-none focus:ring-2 focus:ring-brand">
+                        <option>Woodland</option>
+                        <option>Wetland</option>
+                        <option>Grassland</option>
+                        <option>Urban Park</option>
+                        <option>Backyard</option>
+                        <option>General</option>
+                    </select>
+                </label>
+
+                <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block">Notes
+                    <textarea id="sighting-notes" rows="3" maxlength="220" placeholder="Behavior, sounds, movement, nearby plants..." class="mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm dark:text-white outline-none focus:ring-2 focus:ring-brand"></textarea>
+                </label>
+
                 <button type="submit" class="w-full bg-brand text-white py-5 rounded-2xl btn-gamified text-lg shadow-xl shadow-brand/30 mt-4">
-                    Submit Discovery
+                    Document Sighting
                 </button>
             </form>`;
         
         this.app.game.currentSightingImage = null;
-        this.app.game.addEntry();
         const logForm = document.getElementById('log-form');
         if (logForm) logForm.onsubmit = (e) => { e.preventDefault(); this.app.game.submitLog(); };
     },
@@ -648,6 +842,8 @@ export const ui = {
                 colors: ['#10b981', '#059669', '#f59e0b']
             });
         }
+
+        this.showToast('Use Shop and Sanctuary to spend your new seeds.');
     },
     async shareDiscovery() {
         if (navigator.share && this.lastLoggedSpecies) {
@@ -712,8 +908,12 @@ export const ui = {
         
         const totalXp = document.getElementById('stat-total-xp');
         if (totalXp) totalXp.innerText = s.xp;
+        const hudXp = document.getElementById('hud-xp');
+        if (hudXp) hudXp.innerText = s.xp;
         const seeds = document.getElementById('stat-seeds');
         if (seeds) seeds.innerText = s.seeds;
+        const hudSeeds = document.getElementById('hud-seeds');
+        if (hudSeeds) hudSeeds.innerText = s.seeds;
         const speciesCount = document.getElementById('stat-species');
         if (speciesCount) speciesCount.innerText = Object.keys(s.speciesData).length;
         
@@ -722,6 +922,10 @@ export const ui = {
     },
 
     renderRewards() {
+        this.renderSanctuary();
+    },
+
+    renderSanctuary() {
         const s = this.app.state;
         const streakText = document.getElementById('streak-days-text');
         if (streakText) streakText.innerText = `${s.streak} Days`;
@@ -751,6 +955,37 @@ export const ui = {
         
         const qRewards = document.getElementById('quest-rewards');
         if (qRewards) qRewards.innerHTML = `<span class="text-brand">⚡ ${q.rewards.xp}</span> <span class="text-brand-accent">🌰 ${q.rewards.seeds}</span>`;
+
+        const scene = document.getElementById('sanctuary-scene');
+        const placedCtr = document.getElementById('sanctuary-placed');
+        const inventoryCtr = document.getElementById('sanctuary-inventory');
+        const emptyState = document.getElementById('sanctuary-empty');
+        if (!scene || !placedCtr || !inventoryCtr || !emptyState) return;
+
+        const catalog = this.app.data.decorCatalog();
+        const inventory = s.decorInventory || {};
+        const placed = Array.isArray(s.sanctuaryPlaced) ? s.sanctuaryPlaced : [];
+
+        scene.innerHTML = placed.map((item, index) => {
+            const decor = catalog.find((c) => c.id === item.id);
+            if (!decor) return '';
+            return `<button type="button" onclick="app.ui.removeDecor(${index})" class="absolute text-2xl p-2 rounded-xl bg-white/70 dark:bg-black/30 backdrop-blur hover:scale-110 transition-transform" style="left:${item.x}%; top:${item.y}%;" title="Remove ${decor.name}">${decor.icon}</button>`;
+        }).join('');
+
+        placedCtr.innerHTML = placed.length
+            ? placed.map((item, index) => {
+                const decor = catalog.find((c) => c.id === item.id);
+                if (!decor) return '';
+                return `<div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2"><span class="font-semibold text-sm">${decor.icon} ${decor.name}</span><button type="button" onclick="app.ui.removeDecor(${index})" class="text-xs font-bold text-red-500">Remove</button></div>`;
+            }).join('')
+            : '<div class="text-sm text-gray-400 italic">No decor placed yet. Buy decor in the shop and place it here.</div>';
+
+        const placeable = catalog.filter((decor) => (inventory[decor.id] || 0) > placed.filter((p) => p.id === decor.id).length);
+        inventoryCtr.innerHTML = placeable.length
+            ? placeable.map((decor) => `<button type="button" onclick="app.ui.placeDecor('${decor.id}')" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2 text-sm font-bold text-left">${decor.icon} ${decor.name}</button>`).join('')
+            : '<div class="text-sm text-gray-400 italic">No unplaced decor in inventory.</div>';
+
+        emptyState.classList.toggle('hidden', placed.length > 0);
     },
 
     renderShop() {
@@ -759,11 +994,7 @@ export const ui = {
         if (count) count.innerText = this.app.state.seeds;
         if (!body) return;
 
-        const items = [
-            { id: 'lure', name: 'Party Lure', desc: 'Attracts rare species for the whole party.', cost: 50, icon: '🟣' },
-            { id: 'xp_boost', name: 'XP Potion', desc: 'Instantly gain 500 Experience.', cost: 30, icon: '🧪' },
-            { id: 'radar', name: 'Super Radar', desc: 'Shows exact locations of rare finds.', cost: 100, icon: '📡' }
-        ];
+        const items = this.app.data.decorCatalog();
 
         body.innerHTML = items.map(item => `
             <div class="bg-white dark:bg-surface-dark p-4 rounded-3xl border-2 border-gray-100 dark:border-gray-700 flex items-center gap-4 shadow-sm active:scale-95 transition-transform" onclick="app.ui.buyItem('${item.id}', ${item.cost})">
@@ -771,6 +1002,7 @@ export const ui = {
                 <div class="flex-1">
                     <h4 class="font-black text-lg dark:text-white">${item.name}</h4>
                     <p class="text-xs text-gray-500">${item.desc}</p>
+                    <p class="text-[10px] mt-1 uppercase tracking-wider text-gray-400">${item.category}</p>
                 </div>
                 <div class="bg-brand text-white px-4 py-2 rounded-xl font-black text-sm">🌰 ${item.cost}</div>
             </div>
@@ -784,10 +1016,34 @@ export const ui = {
             return;
         }
         this.app.state.seeds -= cost;
-        this.showToast(`Purchased item!`);
+        this.app.state.decorInventory[id] = (this.app.state.decorInventory[id] || 0) + 1;
+        this.showToast('Decor purchased. Place it in Sanctuary.');
         this.renderShop();
         this.renderProfile();
+        this.renderSanctuary();
         this.app.saveState();
+    },
+
+    placeDecor(id) {
+        const invCount = this.app.state.decorInventory[id] || 0;
+        const placedCount = this.app.state.sanctuaryPlaced.filter((item) => item.id === id).length;
+        if (placedCount >= invCount) {
+            this.showToast('You need to buy another copy first.');
+            return;
+        }
+        this.app.state.sanctuaryPlaced.push({
+            id,
+            x: Math.round(8 + Math.random() * 78),
+            y: Math.round(12 + Math.random() * 72)
+        });
+        this.app.saveState();
+        this.renderSanctuary();
+    },
+
+    removeDecor(index) {
+        this.app.state.sanctuaryPlaced.splice(index, 1);
+        this.app.saveState();
+        this.renderSanctuary();
     },
 
     renderAchievements() {

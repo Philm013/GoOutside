@@ -29,7 +29,7 @@
                         }
                     },
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        sans: ['Manrope', 'ui-sans-serif', 'system-ui'],
                     },
                     spacing: {
                         'safe-t': 'env(safe-area-inset-top)',
@@ -48,7 +48,7 @@
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     
     <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
     <!-- Custom Style -->
@@ -79,7 +79,7 @@
     <!-- === HUD LAYER === -->
     <div id="hud" class="absolute inset-0 z-10 pointer-events-none p-4 pt-safe-t flex flex-col justify-between">
         <!-- Top Bar -->
-        <div class="pointer-events-auto flex justify-between items-start w-full">
+        <div id="hud-top-bar" class="pointer-events-auto flex justify-between items-start w-full gap-2">
             <div class="flex gap-2">
                 <button onclick="app.hud.toggleFullscreen()" class="w-12 h-12 rounded-full glass-hud shadow-md flex items-center justify-center text-gray-700 dark:text-gray-200 active:scale-95 transition-transform">
                     <span class="material-symbols-rounded text-2xl">fullscreen</span>
@@ -88,10 +88,16 @@
                     <div id="compass-needle" class="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[16px] border-b-red-500 transition-transform duration-300"></div>
                 </div>
             </div>
-             <button onclick="app.ui.openPanel('panel-social')" class="glass-hud px-4 h-12 rounded-full shadow-md flex items-center gap-2 active:scale-95 transition-transform">
-                <span class="material-symbols-rounded text-brand dark:text-brand-light">group</span>
-                <span class="text-sm font-bold text-gray-800 dark:text-white" id="player-count">1</span>
-            </button>
+            <div class="glass-hud px-4 py-2 rounded-2xl shadow-md min-w-[190px]">
+                <div class="text-[10px] uppercase tracking-widest font-bold text-gray-400">Expedition Status</div>
+                <div class="flex items-center justify-between mt-1 gap-3">
+                    <div class="text-sm font-extrabold text-brand">⚡ <span id="hud-xp">0</span></div>
+                    <div class="text-sm font-extrabold text-amber-500">🌰 <span id="hud-seeds">0</span></div>
+                    <button onclick="app.ui.openPanel('panel-social')" class="w-8 h-8 rounded-full bg-white/90 dark:bg-gray-700 flex items-center justify-center active:scale-95 transition-transform" title="Party">
+                        <span class="material-symbols-rounded text-base text-brand">group</span>
+                    </button>
+                </div>
+            </div>
         </div>
         
         <!-- Recenter Fab -->
@@ -145,18 +151,24 @@
 
         <!-- 2. FIELD GUIDE -->
         <div id="panel-fieldGuide" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto pt-safe-t">
-            <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 shadow-sm z-10 shrink-0 h-16 flex items-center justify-between gap-4">
-                <h2 class="text-xl font-bold whitespace-nowrap">Field Guide</h2>
+            <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 shadow-sm z-30 shrink-0 h-16 flex items-center justify-between gap-4 overflow-visible">
+                <h2 class="text-xl font-bold whitespace-nowrap">Wildlife Atlas</h2>
                 <div class="relative flex-1">
                     <span class="material-symbols-rounded absolute left-3 top-2.5 text-gray-400 text-lg">search</span>
                     <input type="text" id="fieldguide-search" placeholder="Search..." class="w-full bg-gray-100 dark:bg-gray-800 pl-9 pr-4 py-2 rounded-xl text-sm focus:ring-2 focus:ring-brand outline-none transition-all dark:text-white">
                 </div>
-                <div class="flex gap-2">
+                <div class="relative flex gap-2 items-center" id="fieldguide-view-controls">
                     <button onclick="app.ui.openWizard()" class="w-10 h-10 rounded-full bg-brand-accent text-white flex items-center justify-center shadow-lg active:scale-95 transition-transform" title="Identification Wizard">
                         <span class="material-symbols-rounded">magic_button</span>
                     </button>
                     <button onclick="app.ui.setFieldGuideView('grid')" id="grid-view-btn" class="w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center"><span class="material-symbols-rounded">grid_view</span></button>
                     <button onclick="app.ui.setFieldGuideView('list')" id="list-view-btn" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded">view_list</span></button>
+                    <div id="fieldguide-size-menu" class="hidden absolute right-0 top-[52px] z-[90] min-w-[180px] rounded-2xl bg-white/95 dark:bg-gray-800/95 shadow-2xl border border-gray-100 dark:border-gray-700 p-2 backdrop-blur">
+                        <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 px-2 py-1">Grid Size</div>
+                        <button type="button" data-size="compact" class="fieldguide-size-opt w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Compact</button>
+                        <button type="button" data-size="comfortable" class="fieldguide-size-opt w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Comfortable</button>
+                        <button type="button" data-size="immersive" class="fieldguide-size-opt w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Immersive</button>
+                    </div>
                 </div>
             </header>
             
@@ -169,17 +181,17 @@
                 <div id="fieldguide-tabs" class="flex gap-2 overflow-x-auto p-3 hide-scrollbar"></div>
             </div>
 
-            <div id="fieldguide-body" class="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-32 content-start"></div>
+            <div id="fieldguide-body" class="fg-grid fg-size-comfortable flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-32 content-start"></div>
         </div>
 
         <!-- 3. INVENTORY -->
         <div id="panel-inventory" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto pt-safe-t">
             <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 shadow-sm z-10 shrink-0 h-16 flex justify-between items-center">
-                <h2 class="text-xl font-bold">My Bag</h2>
+                <h2 class="text-xl font-bold">Sighting Journal</h2>
                 <div id="inventory-count-badge" class="bg-brand-light text-brand px-3 py-1 rounded-lg text-xs font-bold">0 Items</div>
             </header>
             <div class="p-3 bg-surface-light dark:bg-surface-dark border-b border-gray-100 dark:border-gray-700 shrink-0">
-                <input type="text" id="inventory-search" placeholder="Filter..." class="w-full bg-gray-100 dark:bg-gray-800 border-none pl-4 pr-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-brand outline-none dark:text-white">
+                <input type="text" id="inventory-search" placeholder="Search species, notes, weather..." class="w-full bg-gray-100 dark:bg-gray-800 border-none pl-4 pr-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-brand outline-none dark:text-white">
             </div>
             <div class="bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-sm shrink-0 z-10">
                 <div id="inventory-tabs" class="flex gap-2 overflow-x-auto p-3 hide-scrollbar"></div>
@@ -187,29 +199,47 @@
             <div id="inventory-body" class="flex-1 overflow-y-auto p-4 grid grid-cols-1 gap-3 pb-32 content-start"></div>
         </div>
 
-        <!-- 4. REWARDS -->
+        <!-- 4. SANCTUARY -->
         <div id="panel-rewards" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto pt-safe-t">
              <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex justify-between items-center shadow-sm z-10 shrink-0 h-16">
-                 <h2 class="text-xl font-bold">Rewards</h2>
+                 <h2 class="text-xl font-bold">Sanctuary</h2>
                  <button onclick="app.ui.openPanel('map')" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded">close</span></button>
              </header>
              <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
-                <div class="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+                <section class="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-black text-lg">Your Nature Home</h3>
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Tap decor to remove</span>
+                    </div>
+                    <div id="sanctuary-scene" class="relative h-56 rounded-2xl overflow-hidden border border-emerald-100 dark:border-emerald-800/40 bg-[radial-gradient(circle_at_top,#bbf7d0_0%,#86efac_35%,#4ade80_100%)] dark:bg-[radial-gradient(circle_at_top,#14532d_0%,#166534_40%,#14532d_100%)]">
+                        <div id="sanctuary-empty" class="absolute inset-0 flex items-center justify-center text-sm text-emerald-900/70 dark:text-emerald-100/70 font-semibold">Buy decor in Shop and place it here.</div>
+                    </div>
+                </section>
+
+                <section class="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
+                    <h3 class="font-black text-base">Placed Decor</h3>
+                    <div id="sanctuary-placed" class="space-y-2"></div>
+                </section>
+
+                <section class="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
+                    <h3 class="font-black text-base">Ready To Place</h3>
+                    <div id="sanctuary-inventory" class="grid grid-cols-2 gap-2"></div>
+                </section>
+
+                <section class="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-bold text-lg flex items-center gap-2">🔥 Daily Streak</h3>
                         <div id="streak-days-text" class="bg-orange-100 text-orange-600 px-3 py-1 rounded-lg text-sm font-bold">0 Days</div>
                     </div>
                     <div id="streak-days-container" class="grid grid-cols-7 gap-2 text-center"></div>
-                </div>
-                 <div class="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-                    <h3 class="font-bold text-lg">Daily Quest</h3>
+                    <h3 class="font-bold text-lg mt-5">Daily Quest</h3>
                     <p class="text-gray-500 text-sm my-2" id="quest-description">Loading...</p>
                     <div class="h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden my-4"><div id="quest-progress-fill" class="h-full bg-brand rounded-full transition-all"></div></div>
                     <div class="flex justify-between items-center">
                         <div id="quest-rewards" class="font-bold text-sm text-brand-dark dark:text-brand-light flex gap-4"></div>
                         <div id="quest-status" class="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-lg text-xs font-bold text-gray-500 uppercase tracking-wider"></div>
                     </div>
-                </div>
+                </section>
              </div>
         </div>
         
@@ -338,7 +368,7 @@
         <!-- 7. SHOP -->
         <div id="panel-shop" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto pt-safe-t">
             <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex justify-between items-center shadow-sm shrink-0 h-16">
-                <h2 class="text-xl font-bold">Nature Shop</h2>
+                <h2 class="text-xl font-bold">Decor Shop</h2>
                 <div class="flex items-center gap-2">
                     <div class="bg-brand-light text-brand px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">🌰 <span id="shop-seeds-count">0</span></div>
                     <button onclick="app.ui.openPanel('map')" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded">close</span></button>
@@ -361,7 +391,7 @@
     <nav class="fixed bottom-0 lg:left-0 lg:top-0 lg:h-full lg:w-20 w-full bg-surface-light dark:bg-surface-dark border-t lg:border-t-0 lg:border-r border-gray-200 dark:border-gray-800 z-30 flex lg:flex-col justify-around items-start h-nav lg:h-auto lg:py-4 pb-safe-b pt-2 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] lg:shadow-none">
         <button onclick="app.ui.openPanel('panel-profile')" class="nav-btn group flex flex-col items-center gap-1 p-1 w-12 lg:w-full lg:py-4 active:scale-95"><span class="material-symbols-rounded text-2xl text-gray-400 group-[.active]:text-brand">person</span><span class="text-[8px] font-bold text-gray-400 group-[.active]:text-brand uppercase">Profile</span></button>
         <button onclick="app.ui.openPanel('panel-fieldGuide')" class="nav-btn group flex flex-col items-center gap-1 p-1 w-12 lg:w-full lg:py-4 active:scale-95"><span class="material-symbols-rounded text-2xl text-gray-400 group-[.active]:text-brand">menu_book</span><span class="text-[8px] font-bold text-gray-400 group-[.active]:text-brand uppercase">Guide</span></button>
-        <button onclick="app.ui.openPanel('panel-achievements')" class="nav-btn group flex flex-col items-center gap-1 p-1 w-12 lg:w-full lg:py-4 active:scale-95"><span class="material-symbols-rounded text-2xl text-gray-400 group-[.active]:text-brand">workspace_premium</span><span class="text-[8px] font-bold text-gray-400 group-[.active]:text-brand uppercase">Badges</span></button>
+        <button onclick="app.ui.openPanel('panel-rewards')" class="nav-btn group flex flex-col items-center gap-1 p-1 w-12 lg:w-full lg:py-4 active:scale-95"><span class="material-symbols-rounded text-2xl text-gray-400 group-[.active]:text-brand">cottage</span><span class="text-[8px] font-bold text-gray-400 group-[.active]:text-brand uppercase">Home</span></button>
         
         <button onclick="app.ui.openLogSighting()" class="-mt-8 lg:mt-0 group active:scale-90 transition-transform">
             <div class="w-16 h-16 bg-brand rounded-full shadow-xl shadow-brand/40 flex items-center justify-center border-[5px] border-surface-light dark:border-surface-dark"><span class="material-symbols-rounded text-white text-3xl">add_a_photo</span></div>
@@ -369,7 +399,7 @@
 
         <button onclick="app.ui.openPanel('map')" id="nav-btn-map" class="nav-btn active group flex flex-col items-center gap-1 p-1 w-12 lg:w-full lg:py-4 active:scale-95"><span class="material-symbols-rounded text-2xl text-gray-400 group-[.active]:text-brand">map</span><span class="text-[8px] font-bold text-gray-400 group-[.active]:text-brand uppercase">Map</span></button>
         <button onclick="app.ui.openPanel('panel-shop')" class="nav-btn group flex flex-col items-center gap-1 p-1 w-12 lg:w-full lg:py-4 active:scale-95"><span class="material-symbols-rounded text-2xl text-gray-400 group-[.active]:text-brand">shopping_bag</span><span class="text-[8px] font-bold text-gray-400 group-[.active]:text-brand uppercase">Shop</span></button>
-        <button onclick="app.ui.openPanel('panel-inventory')" class="nav-btn group flex flex-col items-center gap-1 p-1 w-12 lg:w-full lg:py-4 active:scale-95"><span class="material-symbols-rounded text-2xl text-gray-400 group-[.active]:text-brand">inventory_2</span><span class="text-[8px] font-bold text-gray-400 group-[.active]:text-brand uppercase">Bag</span></button>
+        <button onclick="app.ui.openPanel('panel-inventory')" class="nav-btn group flex flex-col items-center gap-1 p-1 w-12 lg:w-full lg:py-4 active:scale-95"><span class="material-symbols-rounded text-2xl text-gray-400 group-[.active]:text-brand">book_2</span><span class="text-[8px] font-bold text-gray-400 group-[.active]:text-brand uppercase">Journal</span></button>
     </nav>
 
     <!-- === MODALS === -->
@@ -379,7 +409,7 @@
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="app.ui.closeLogSighting()"></div>
         <div id="logSightingContent" class="bg-surface-light dark:bg-surface-dark w-full max-w-lg rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 pointer-events-auto flex flex-col max-h-[90dvh] pb-safe-b">
             <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center shrink-0">
-                <h2 class="text-lg font-bold">Log a Sighting</h2>
+                <h2 class="text-lg font-bold">Document a Sighting</h2>
                 <button onclick="app.ui.closeLogSighting()" class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
             </div>
             <div id="log-sighting-body" class="p-4 overflow-y-auto"></div>
@@ -408,7 +438,7 @@
     <div id="sightingLogged" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 opacity-0 pointer-events-none transition-opacity duration-300">
         <div id="successCard" class="bg-surface-light dark:bg-surface-dark w-full max-w-sm rounded-3xl p-8 text-center transform scale-90 transition-transform duration-300 shadow-2xl border border-gray-700">
             <div class="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce"><span class="material-symbols-rounded text-6xl">check_circle</span></div>
-            <h2 class="text-3xl font-black mb-2">Logged!</h2>
+            <h2 class="text-3xl font-black mb-2">Documented!</h2>
             <p class="text-brand font-bold text-xl mb-8" id="logged-species-name"></p>
             <div class="flex justify-center gap-4 mb-8">
                 <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl min-w-[100px] border border-gray-100 dark:border-gray-700"><div class="text-2xl font-black text-brand">+<span id="logged-xp"></span></div><div class="text-xs uppercase font-bold text-gray-500">XP</div></div>

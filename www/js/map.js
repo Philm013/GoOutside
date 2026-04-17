@@ -1,5 +1,5 @@
 export const map = {
-    map: null, pos: {}, markers: {}, collectibles: {}, globalSightings: [], activeLures: [],
+    map: null, pos: {}, markers: {}, collectibles: {}, globalSightings: [], personalSightings: [], activeLures: [],
     
     init(app) {
         this.app = app;
@@ -17,6 +17,8 @@ export const map = {
             }),
             zIndexOffset: 1000
         }).addTo(this.map);
+
+        this.loadPersonalSightings();
 
         if (typeof Capacitor !== 'undefined') {
             Capacitor.Plugins.Geolocation.watchPosition({ enableHighAccuracy: true }, (p) => {
@@ -82,6 +84,29 @@ export const map = {
         const el = marker.getElement();
         if(el) {
             el.style.animation = 'scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+        }
+    },
+    loadPersonalSightings() {
+        if (!Array.isArray(this.app.state.sightingsLog)) return;
+        this.app.state.sightingsLog.slice(0, 50).forEach((entry) => this.addPersonalSighting(entry, false));
+    },
+    addPersonalSighting(entry, focus = true) {
+        if (!entry || !entry.lat || !entry.lng) return;
+
+        const icon = L.divIcon({
+            className: 'bg-transparent',
+            html: `<div class="bg-white/95 text-gray-800 px-2 py-1 rounded-full shadow-lg border border-gray-200 text-[11px] font-bold">📷 ${entry.speciesName}</div>`,
+            iconSize: [120, 28],
+            iconAnchor: [60, 28]
+        });
+
+        const marker = L.marker([entry.lat, entry.lng], { icon }).addTo(this.map);
+        const note = entry.notes ? `<div style="margin-top:6px;color:#6b7280;">${entry.notes}</div>` : '';
+        marker.bindPopup(`<div style="font-weight:700;">${entry.speciesName}</div><div style="font-size:12px;color:#6b7280;">+${entry.xp} XP • +${entry.seeds} Seeds</div>${note}`);
+        this.personalSightings.push(marker);
+
+        if (focus) {
+            this.map.flyTo([entry.lat, entry.lng], 16, { duration: 0.8 });
         }
     },
     spawnLure(lat, lng) {

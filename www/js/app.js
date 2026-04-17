@@ -18,8 +18,10 @@ const app = {
     map,
 
     async init() {
-        const stored = localStorage.getItem('NQ_State_FINAL_V2');
-        this.state = stored ? JSON.parse(stored) : this.data.defaultState();
+        const storedV3 = localStorage.getItem('NQ_State_FINAL_V3');
+        const storedV2 = localStorage.getItem('NQ_State_FINAL_V2');
+        const rawState = storedV3 ? JSON.parse(storedV3) : (storedV2 ? JSON.parse(storedV2) : this.data.defaultState());
+        this.state = this.data.normalizeState(rawState);
         
         // Initialize modules
         this.hud.init(this);
@@ -46,7 +48,7 @@ const app = {
     },
 
     saveState() {
-        localStorage.setItem('NQ_State_FINAL_V2', JSON.stringify(this.state));
+        localStorage.setItem('NQ_State_FINAL_V3', JSON.stringify(this.state));
     }
 };
 

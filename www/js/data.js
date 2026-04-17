@@ -35,6 +35,38 @@ export const data = {
         }
         return { level: lvl, curr: xp, req, pct: (xp / req) * 100 };
     },
+    decorCatalog() {
+        return [
+            { id: 'wildflower_patch', name: 'Wildflower Patch', icon: '🌼', cost: 35, category: 'Flora', desc: 'A pollinator-friendly color burst for your sanctuary.' },
+            { id: 'mossy_log', name: 'Mossy Log', icon: '🪵', cost: 45, category: 'Habitat', desc: 'A cozy perch and shelter for small wildlife.' },
+            { id: 'bird_bath', name: 'Bird Bath', icon: '⛲', cost: 80, category: 'Feature', desc: 'Attracts more feathered visitors to your home world.' },
+            { id: 'owl_box', name: 'Nest Box', icon: '🪺', cost: 60, category: 'Habitat', desc: 'A nesting spot for local birds.' },
+            { id: 'stone_path', name: 'Stone Path', icon: '🪨', cost: 30, category: 'Structure', desc: 'Adds a gentle path through your nature space.' },
+            { id: 'fern_cluster', name: 'Fern Cluster', icon: '🌿', cost: 40, category: 'Flora', desc: 'Soft green texture for shady corners.' }
+        ];
+    },
+    normalizeState(raw = {}) {
+        const defaults = this.defaultState();
+        const next = {
+            ...defaults,
+            ...raw,
+            quests: {
+                ...defaults.quests,
+                ...(raw.quests || {}),
+                daily: {
+                    ...defaults.quests.daily,
+                    ...((raw.quests && raw.quests.daily) || {})
+                }
+            }
+        };
+
+        if (!next.speciesData || typeof next.speciesData !== 'object') next.speciesData = {};
+        if (!Array.isArray(next.sightingsLog)) next.sightingsLog = [];
+        if (!next.decorInventory || typeof next.decorInventory !== 'object') next.decorInventory = {};
+        if (!Array.isArray(next.sanctuaryPlaced)) next.sanctuaryPlaced = [];
+
+        return next;
+    },
     defaultState: () => ({
         username: `Explorer${Math.floor(Math.random() * 999)}`,
         xp: 0,
@@ -43,9 +75,12 @@ export const data = {
         lastLogin: new Date().toDateString(),
         avatar: '🦋',
         speciesData: {},
+        sightingsLog: [],
+        decorInventory: {},
+        sanctuaryPlaced: [],
         quests: {
             daily: {
-                description: "Log 3 species",
+                description: "Document 3 verified sightings",
                 progress: 0,
                 target: 3,
                 rewards: { xp: 150, seeds: 50 }
