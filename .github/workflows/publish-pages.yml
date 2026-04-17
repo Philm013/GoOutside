@@ -1,0 +1,73 @@
+name: Publish main to pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+
+      - name: Build publish directory
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p _site/status
+
+          rsync -av --delete \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'node_modules' \
+            --exclude '_site' \
+            ./ _site/
+
+          cat > _site/status/index.html <<EOF
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>GoOutside Pages Status</title>
+            <style>
+              body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+              code { background: #f4f4f4; padding: 0.1rem 0.3rem; border-radius: 4px; }
+            </style>
+          </head>
+          <body>
+            <h1>GoOutside Pages Status</h1>
+            <p><strong>Status:</strong> success</p>
+            <p><strong>Repository:</strong> <code>${{ github.repository }}</code></p>
+            <p><strong>Source branch:</strong> <code>${{ github.ref_name }}</code></p>
+            <p><strong>Commit:</strong> <code>${{ github.sha }}</code></p>
+            <p><strong>Deployed at (UTC):</strong> <code>$(date -u +"%Y-%m-%dT%H:%M:%SZ")</code></p>
+            <p><a href="${RUN_URL}">View workflow run</a></p>
+          </body>
+          </html>
+          EOF
+
+          cat > _site/status/status.json <<EOF
+          {
+            "status": "success",
+            "repository": "${{ github.repository }}",
+            "source_branch": "${{ github.ref_name }}",
+            "commit": "${{ github.sha }}",
+            "deployed_at_utc": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "workflow_run_url": "${RUN_URL}"
+          }
+          EOF
+
+      - name: Deploy to pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: pages
+          publish_dir: ./_site
+          force_orphan: true
