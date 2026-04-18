@@ -266,7 +266,7 @@ export const ui = {
         if (taxon.taxon_photos && taxon.taxon_photos.length > 1) {
             photosHtml = '<div><div class="text-xs font-black uppercase tracking-wider text-gray-400 mb-2">More Photos</div>' +
                 '<div class="flex gap-2 overflow-x-auto hide-scrollbar">' +
-                taxon.taxon_photos.slice(0,6).map(tp => '<img src="' + tp.photo.square_url + '" class="w-20 h-20 rounded-xl object-cover shrink-0">').join('') +
+                taxon.taxon_photos.slice(0,6).map(tp => '<img src="' + (tp.photo.square_url || tp.photo.url || '') + '" class="w-20 h-20 rounded-xl object-cover shrink-0">').join('') +
                 '</div></div>';
         }
         content.innerHTML =
@@ -341,7 +341,7 @@ export const ui = {
         if (notes) notes.value = '';
         const count = document.getElementById('obs-count');
         if (count) count.value = '1';
-        modal.classList.remove('pointer-events-none', 'opacity-0');
+        modal.classList.remove('pointer-events-none', 'opacity-0', 'hidden');
         modal.classList.add('opacity-100');
         if (content) content.classList.remove('translate-y-full');
         if (preselectTaxonId) {
@@ -356,7 +356,7 @@ export const ui = {
         if (!modal) return;
         modal.classList.add('opacity-0');
         if (content) content.classList.add('translate-y-full');
-        setTimeout(() => modal.classList.add('pointer-events-none'), 320);
+        setTimeout(() => modal.classList.add('pointer-events-none', 'hidden'), 320);
     },
 
     openSpeciesSelector(targetBtn) {
@@ -367,7 +367,7 @@ export const ui = {
         const modal = document.getElementById('species-select-modal');
         const content = document.getElementById('species-select-content');
         if (!modal) return;
-        modal.classList.remove('pointer-events-none', 'opacity-0');
+        modal.classList.remove('pointer-events-none', 'opacity-0', 'hidden');
         modal.classList.add('opacity-100');
         if (content) content.classList.remove('translate-y-full');
     },
@@ -378,7 +378,7 @@ export const ui = {
         if (!modal) return;
         modal.classList.add('opacity-0');
         if (content) content.classList.add('translate-y-full');
-        setTimeout(() => modal.classList.add('pointer-events-none'), 320);
+        setTimeout(() => modal.classList.add('pointer-events-none', 'hidden'), 320);
     },
 
     _renderSpeciesSelectorTabs() {
@@ -442,7 +442,7 @@ export const ui = {
             badgesEl.classList.remove('hidden');
             badgesList.innerHTML = newBadges.map(b => '<span class="bg-amber-50 dark:bg-amber-900/20 px-3 py-1 rounded-full text-xs font-bold text-amber-700 dark:text-amber-300">' + b.icon + ' ' + b.name + '</span>').join('');
         } else if (badgesEl) { badgesEl.classList.add('hidden'); }
-        modal.classList.remove('pointer-events-none', 'opacity-0');
+        modal.classList.remove('pointer-events-none', 'opacity-0', 'hidden');
         modal.classList.add('opacity-100');
         if (card) { card.classList.remove('scale-90'); card.classList.add('scale-100'); }
         try { if (typeof confetti !== 'undefined') confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 }, colors: ['#2d6a4f','#52b788','#e9c46a','#d8f3dc'] }); } catch(e) {}
@@ -454,7 +454,7 @@ export const ui = {
         if (!modal) return;
         modal.classList.add('opacity-0');
         if (card) { card.classList.add('scale-90'); card.classList.remove('scale-100'); }
-        setTimeout(() => modal.classList.add('pointer-events-none'), 320);
+        setTimeout(() => modal.classList.add('pointer-events-none', 'hidden'), 320);
         this.renderHUDStats();
     },
 
@@ -463,7 +463,7 @@ export const ui = {
         const modal = document.getElementById('kgModal');
         const inner = modal?.querySelector('.rounded-t-3xl');
         if (!modal) return;
-        modal.classList.remove('pointer-events-none', 'opacity-0');
+        modal.classList.remove('pointer-events-none', 'opacity-0', 'hidden');
         modal.classList.add('opacity-100');
         if (inner) inner.classList.remove('translate-y-full');
     },
@@ -474,7 +474,7 @@ export const ui = {
         if (!modal) return;
         modal.classList.add('opacity-0');
         if (inner) inner.classList.add('translate-y-full');
-        setTimeout(() => modal.classList.add('pointer-events-none'), 320);
+        setTimeout(() => modal.classList.add('pointer-events-none', 'hidden'), 320);
         if (this.app.identify?.stopAudio) this.app.identify.stopAudio();
     },
 
@@ -482,7 +482,7 @@ export const ui = {
         const modal = document.getElementById('audioIdModal');
         const inner = modal?.querySelector('.rounded-t-3xl');
         if (!modal) return;
-        modal.classList.remove('pointer-events-none', 'opacity-0');
+        modal.classList.remove('pointer-events-none', 'opacity-0', 'hidden');
         modal.classList.add('opacity-100');
         if (inner) inner.classList.remove('translate-y-full');
     },
@@ -494,7 +494,7 @@ export const ui = {
         if (!modal) return;
         modal.classList.add('opacity-0');
         if (inner) inner.classList.add('translate-y-full');
-        setTimeout(() => modal.classList.add('pointer-events-none'), 320);
+        setTimeout(() => modal.classList.add('pointer-events-none', 'hidden'), 320);
         const content = document.getElementById('audio-id-content');
         if (content) content.innerHTML = '<div class="flex flex-col items-center gap-5 py-6"><div class="text-6xl">🐦</div><h3 class="text-xl font-black text-center">Ready to Listen</h3><p class="text-sm text-gray-500 text-center max-w-xs">Point your phone toward birds you hear. We\'ll record and analyse the audio.</p><button onclick="app.identify.startAudioId()" class="bg-brand text-white px-10 py-4 rounded-2xl font-black text-lg shadow-lg shadow-brand/30 active:scale-95 transition-transform"><span class="material-symbols-rounded align-middle mr-1">mic</span> Start Listening</button></div>';
     },

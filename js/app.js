@@ -1,11 +1,11 @@
-import { haptics } from './haptics.js?v=20260418b';
-import { hud } from './hud.js?v=20260418b';
-import { ui } from './ui.js?v=20260418b';
-import { data } from './data.js?v=20260418b';
-import { map } from './map.js?v=20260418b';
-import { inat } from './inat.js?v=20260418b';
-import { identify } from './identify.js?v=20260418b';
-import { journal } from './journal.js?v=20260418b';
+import { haptics } from './haptics.js?v=20260418d';
+import { hud } from './hud.js?v=20260418d';
+import { ui } from './ui.js?v=20260418d';
+import { data } from './data.js?v=20260418d';
+import { map } from './map.js?v=20260418d';
+import { inat } from './inat.js?v=20260418d';
+import { identify } from './identify.js?v=20260418d';
+import { journal } from './journal.js?v=20260418d';
 
 const app = {
     state: {},
@@ -56,6 +56,8 @@ const app = {
         setProgress(50, 'Loading what\'s in season near you…');
         if (pos) {
             const { lat, lng } = pos;
+            // Prime the map marker immediately so user appears without waiting for watchPosition
+            this.map._onPosition(lat, lng);
             const [seasonal, nearby] = await Promise.allSettled([
                 this.inat.seasonalSpecies(lat, lng, { limit: 200 }),
                 this.inat.nearbyObservations(lat, lng, { limit: 50, days: 14 }),

@@ -355,7 +355,15 @@ export const identify = {
                             ${opt.desc ? `<p class="text-xs text-gray-400 pl-8">${opt.desc}</p>` : ''}
                         </button>`;
                 }).join('')}
-            </div>`;
+            </div>
+            ${step.multi ? `
+            <button onclick="app.identify.kgNext()"
+                class="mt-4 w-full py-4 rounded-2xl font-black text-base transition-all ${Array.isArray(currentSel) && currentSel.length > 0 ? 'bg-brand text-white shadow-lg shadow-brand/30 active:scale-95' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}">
+                ${Array.isArray(currentSel) && currentSel.length > 0
+                    ? 'Next <span class="material-symbols-rounded" style="vertical-align:middle;font-size:18px">arrow_forward</span>'
+                    : 'Select options above &mdash; or <span style="text-decoration:underline;cursor:pointer" onclick="event.stopPropagation();app.identify.kgNext()">Skip</span>'}
+            </button>` : ''}
+            `;
     },
 
     selectCategory(cat) {

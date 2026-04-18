@@ -112,6 +112,7 @@ export const hud = {
 
         // ── Snap decision on release ─────────────────────────────────
         let startY = 0, startTop = 0, active = false, startState = 'peek';
+        let pendingStart = null; // deferred begin pending direction detection
         const getTop = () => parseFloat(sheet.style.top) || SNAPS.peek();
 
         const snapOnRelease = () => {
@@ -150,6 +151,7 @@ export const hud = {
             sheet.style.top = clamped + 'px';
         };
         const end = () => {
+            pendingStart = null;
             if (!active) return;
             active = false;
             snapOnRelease();
@@ -165,13 +167,20 @@ export const hud = {
         if (content) {
             content.addEventListener('touchstart', (e) => {
                 if (this._snapState !== 'peek' && content.scrollTop === 0) {
-                    begin(e.touches[0].clientY);
+                    pendingStart = { y: e.touches[0].clientY, x: e.touches[0].clientX };
                 }
             }, { passive: true });
         }
 
         // ── Document-level move/end (keeps drag alive off-element) ──
         document.addEventListener('touchmove', (e) => {
+            // Resolve pending content drag — only start if movement is primarily vertical
+            if (pendingStart) {
+                const dy = Math.abs(e.touches[0].clientY - pendingStart.y);
+                const dx = Math.abs(e.touches[0].clientX - pendingStart.x);
+                if (dy > dx && dy > 4) begin(pendingStart.y);
+                pendingStart = null;
+            }
             if (!active) return;
             e.preventDefault();
             move(e.touches[0].clientY);

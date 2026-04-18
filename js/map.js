@@ -23,7 +23,9 @@ export const map = {
         this.me = L.marker([0, 0], {
             icon: L.divIcon({
                 className: "bg-transparent",
-                html: "<div id=\"map-me\" class=\"map-me-pin\"></div>"
+                html: "<div id=\"map-me\" class=\"map-me-pin\">" + (app.state.avatar || '🌍') + "</div>",
+                iconSize: [44, 44],
+                iconAnchor: [22, 22]
             }),
             zIndexOffset: 1000
         }).addTo(this.map);

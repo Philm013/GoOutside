@@ -173,14 +173,18 @@ body { background: var(--paper); overflow: hidden; }
 
 /* ── Map Markers ──────────────────────────────────────────────── */
 .map-me-pin {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 28px;
     filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
-    transform: translate(-50%,-50%);
     animation: map-pulse 2.5s ease-in-out infinite;
 }
 @keyframes map-pulse {
-    0%,100% { transform: translate(-50%,-50%) scale(1); }
-    50%      { transform: translate(-50%,-50%) scale(1.15); }
+    0%,100% { transform: scale(1); }
+    50%      { transform: scale(1.15); }
 }
 
 .community-obs-pin { position: relative; }
@@ -221,14 +225,14 @@ body { background: var(--paper); overflow: hidden; }
 /* ── Home Sheet ───────────────────────────────────────────────── */
 #home-sheet {
     position: fixed;
-    left: 0; right: 0;
+    left: 0; right: 0; bottom: 0;
     background: var(--surface);
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
     z-index: 25;
     transition: top 0.38s cubic-bezier(0.34,1.38,0.64,1);
-    min-height: 200px;
-    padding-bottom: var(--nav-h);
+    display: flex;
+    flex-direction: column;
     touch-action: pan-y;
 }
 @media (prefers-color-scheme: dark) {
@@ -251,9 +255,12 @@ body { background: var(--paper); overflow: hidden; }
 #home-sheet-handle:active #home-sheet-handle-bar { background: var(--brand-lt); }
 @media (prefers-color-scheme: dark) { #home-sheet-handle-bar { background: #4b5563; } }
 #home-sheet-content {
+    flex: 1;
+    min-height: 0;
     overflow-y: hidden;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    max-height: calc(100vh - 80px);
+    padding-bottom: var(--nav-h);
 }
 .hs-today-row {
     display: flex;
@@ -280,6 +287,8 @@ body { background: var(--paper); overflow: hidden; }
     display: flex; gap: 10px;
     padding: 4px 16px 10px;
     overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
     -ms-overflow-style: none; scrollbar-width: none;
 }
 .hs-species-row::-webkit-scrollbar { display: none; }

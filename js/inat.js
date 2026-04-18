@@ -119,8 +119,9 @@ export const inat = {
         if (cached) return cached;
         try {
             const fields = 'id,name,preferred_common_name,iconic_taxon_name,wikipedia_summary,' +
+                'conservation_status.status_name,' +
                 'default_photo.url,default_photo.medium_url,default_photo.square_url,' +
-                'taxon_photos.photo.url,taxon_photos.photo.medium_url';
+                'taxon_photos.photo.url,taxon_photos.photo.medium_url,taxon_photos.photo.square_url';
             const res = await fetch(`${this.BASE}/taxa/${id}?fields=${fields}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
