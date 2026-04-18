@@ -20,14 +20,14 @@ jobs:
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          mkdir -p _site/status
-
           rsync -av --delete \
             --exclude '.git' \
             --exclude '.github' \
             --exclude 'node_modules' \
             --exclude '_site' \
             ./ _site/
+
+          mkdir -p _site/status
 
           cat > _site/status/index.html <<EOF
           <!doctype html>
