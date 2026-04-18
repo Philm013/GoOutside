@@ -56,36 +56,65 @@ export const hud = {
     _initHomeSheet() {
         const sheet = document.getElementById("home-sheet");
         const handle = document.getElementById("home-sheet-handle");
+        const content = document.getElementById("home-sheet-content");
+        if (!sheet || !handle) return;
 
-        let startY = 0, startTop = 0;
-        const PEEK = window.innerHeight - 160;
-        const OPEN = window.innerHeight - 460;
+        const peek = () => window.innerHeight - 160;
+        const open = () => Math.max(80, window.innerHeight - 520);
 
-        const getTop = () => parseInt(sheet.style.top) || PEEK;
+        let startY = 0, startTop = 0, active = false;
 
+        const getTop  = () => parseFloat(sheet.style.top) || peek();
+        const setTop  = (v) => { sheet.style.top = Math.max(open(), Math.min(peek(), v)) + "px"; };
+        const snapTo  = (toOpen) => {
+            sheet.style.transition = "top 0.35s cubic-bezier(0.4,0,0.2,1)";
+            sheet.style.top = (toOpen ? open() : peek()) + "px";
+            this.homeSheetOpen = toOpen;
+        };
+        const begin   = (y) => { startY = y; startTop = getTop(); active = true; sheet.style.transition = "none"; };
+        const move    = (y) => { if (active) setTop(startTop + (y - startY)); };
+        const end     = () => { if (!active) return; active = false; snapTo(getTop() < (peek() + open()) / 2); };
+
+        // Touch on handle — use document listeners so capture isn't lost
+        handle.addEventListener("touchstart", (e) => {
+            e.stopPropagation();
+            begin(e.touches[0].clientY);
+        }, { passive: true });
+
+        // Touch on content when scrolled to top (drag-down to peek)
+        content.addEventListener("touchstart", (e) => {
+            if (content.scrollTop === 0 && this.homeSheetOpen) {
+                begin(e.touches[0].clientY);
+            }
+        }, { passive: true });
+
+        document.addEventListener("touchmove", (e) => {
+            if (!active) return;
+            e.preventDefault();
+            move(e.touches[0].clientY);
+        }, { passive: false });
+
+        document.addEventListener("touchend",    end, { passive: true });
+        document.addEventListener("touchcancel", end, { passive: true });
+
+        // Pointer (mouse/stylus for desktop testing)
         handle.addEventListener("pointerdown", (e) => {
-            startY = e.clientY;
-            startTop = getTop();
-            this.homeSheetDragging = true;
-            sheet.style.transition = "none";
+            if (e.pointerType === "touch") return; // handled above
             handle.setPointerCapture(e.pointerId);
+            begin(e.clientY);
         });
+        handle.addEventListener("pointermove", (e) => { if (e.pointerType !== "touch") move(e.clientY); });
+        handle.addEventListener("pointerup",   (e) => { if (e.pointerType !== "touch") end(); });
 
-        handle.addEventListener("pointermove", (e) => {
-            const dy = e.clientY - startY;
-            const newTop = Math.max(OPEN, Math.min(PEEK, startTop + dy));
-            sheet.style.top = newTop + "px";
-        });
+        // Reposition on resize/fullscreen change
+        const reposition = () => {
+            sheet.style.transition = "none";
+            sheet.style.top = (this.homeSheetOpen ? open() : peek()) + "px";
+        };
+        window.addEventListener("resize", reposition);
+        document.addEventListener("fullscreenchange", reposition);
 
-        handle.addEventListener("pointerup", () => {
-            this.homeSheetDragging = false;
-            sheet.style.transition = "";
-            const top = getTop();
-            const mid = (PEEK + OPEN) / 2;
-            sheet.style.top = (top < mid ? OPEN : PEEK) + "px";
-        });
-
-        sheet.style.top = PEEK + "px";
+        sheet.style.top = peek() + "px";
     },
 
     async refreshHomeSheet() {
