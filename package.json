@@ -4,7 +4,7 @@
     "sync": "npx cap sync",
     "open:android": "npx cap open android",
     "open:ios": "npx cap open ios",
-    "build": "echo 'No build step required for this project.' && npx cap copy",
+    "build": "tailwindcss -i css/input.css -o css/tailwind.css --minify && npx cap copy",
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {

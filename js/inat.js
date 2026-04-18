@@ -27,7 +27,7 @@ export const inat = {
         if (cached) return cached;
         try {
             const res = await fetch(
-                `${this.V2}/observations?lat=${lat}&lng=${lng}&radius=${radius}&d1=${since}&order=created_at&order_by=desc&per_page=${limit}&photos=true&verifiable=true${iconicParam}&fields=id,taxon,observed_on,place_guess,location,user,photos,description`
+                `${this.V1}/observations?lat=${lat}&lng=${lng}&radius=${radius}&d1=${since}&order_by=created_at&order=desc&per_page=${limit}&photos=true&verifiable=true${iconicParam}`
             );
             const json = await res.json();
             return this._set(key, json.results || []);
