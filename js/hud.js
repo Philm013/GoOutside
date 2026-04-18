@@ -29,6 +29,7 @@ export const hud = {
     },
 
     toggleFullscreen() {
+        if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(() => {});
         } else {
             document.exitFullscreen().catch(() => {});
@@ -43,9 +44,9 @@ export const hud = {
         const el = document.getElementById("hud-stats-bar");
         if (el) {
             el.innerHTML =
-                "<span class="hud-stat">" + season.icon + " " + season.name + "</span>" +
-                "<span class="hud-stat text-brand">" + String.fromCodePoint(0x1F30D) + " Lv." + lv.level + "</span>" +
-                "<span class="hud-stat">" + String.fromCodePoint(0x1F525) + " " + s.streak + "</span>";
+                '<span class="hud-stat">' + season.icon + " " + season.name + "</span>" +
+                '<span class="hud-stat text-brand">' + String.fromCodePoint(0x1F30D) + " Lv." + lv.level + "</span>" +
+                '<span class="hud-stat">' + String.fromCodePoint(0x1F525) + " " + s.streak + "</span>";
         }
         // Update avatar
         const avEl = document.getElementById("hud-avatar");
@@ -104,25 +105,25 @@ export const hud = {
         }
 
         el.innerHTML =
-            "<div class="hs-today-row">" +
-                "<div class="hs-today-stat"><span class="hs-today-num">" + todayObs + "</span><span class="hs-today-label">Today</span></div>" +
-                "<div class="hs-divider"></div>" +
-                "<div class="hs-today-stat"><span class="hs-today-num">" + sppCount + "</span><span class="hs-today-label">Species</span></div>" +
-                "<div class="hs-divider"></div>" +
-                "<div class="hs-today-stat"><span class="hs-today-num streak">" + String.fromCodePoint(0x1F525) + s.streak + "</span><span class="hs-today-label">Streak</span></div>" +
-            "</div>" +
-            "<div class="hs-section-title">" + season.icon + " In Your Area · " + season.name + "</div>" +
-            "<div class="hs-species-row">" +
-                spotlight.slice(0, 4).map(function(s) {
-                    return "<button onclick="app.ui.openSpeciesDetail(" + s.id + ")" class="hs-species-card">" +
-                        "<img src="" + (s.squareImg || s.img) + "" class="hs-species-img">" +
-                        "<div class="hs-species-name">" + s.name + "</div>" +
-                        "<div class="hs-species-rarity " + (s.rarity === "Common" ? "rarity-common" : s.rarity === "Uncommon" ? "rarity-uncommon" : "rarity-rare") + "">" + s.rarity + "</div>" +
-                    "</button>";
-                }).join("") +
-            "</div>" +
-            "<button onclick="app.ui.openPanel(\"panel-discover\")" class="hs-discover-btn">" +
-                "<span class="material-symbols-rounded">explore</span> Explore More" +
-            "</button>";
+            '<div class="hs-today-row">' +
+                '<div class="hs-today-stat"><span class="hs-today-num">' + todayObs + '</span><span class="hs-today-label">Today</span></div>' +
+                '<div class="hs-divider"></div>' +
+                '<div class="hs-today-stat"><span class="hs-today-num">' + sppCount + '</span><span class="hs-today-label">Species</span></div>' +
+                '<div class="hs-divider"></div>' +
+                '<div class="hs-today-stat"><span class="hs-today-num streak">' + String.fromCodePoint(0x1F525) + s.streak + '</span><span class="hs-today-label">Streak</span></div>' +
+            '</div>' +
+            '<div class="hs-section-title">' + season.icon + ' In Your Area · ' + season.name + '</div>' +
+            '<div class="hs-species-row">' +
+                spotlight.slice(0, 4).map(function(sp) {
+                    return '<button onclick="app.ui.openSpeciesDetail(' + sp.id + ')" class="hs-species-card">' +
+                        '<img src="' + (sp.squareImg || sp.img) + '" class="hs-species-img">' +
+                        '<div class="hs-species-name">' + sp.name + '</div>' +
+                        '<div class="hs-species-rarity ' + (sp.rarity === 'Common' ? 'rarity-common' : sp.rarity === 'Uncommon' ? 'rarity-uncommon' : 'rarity-rare') + '">' + sp.rarity + '</div>' +
+                    '</button>';
+                }).join('') +
+            '</div>' +
+            '<button onclick="app.ui.openPanel(\'panel-discover\')" class="hs-discover-btn">' +
+                '<span class="material-symbols-rounded">explore</span> Explore More' +
+            '</button>';
     }
 };

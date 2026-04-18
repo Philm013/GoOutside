@@ -33,7 +33,7 @@ export const map = {
         const geoOpts = { enableHighAccuracy: true };
         if (typeof Capacitor !== "undefined" && Capacitor.isNativePlatform()) {
             Capacitor.Plugins.Geolocation.watchPosition(geoOpts, (p) => {
-                if (pkg install upgrade) return;
+                if (p.error) return;
                 this._onPosition(p.coords.latitude, p.coords.longitude);
             });
         } else {
@@ -48,6 +48,7 @@ export const map = {
     _onPosition(lat, lng) {
         this.pos = { lat, lng };
         this.me.setLatLng([lat, lng]);
+        if (!this.centered) {
             this.recenter();
             this.centered = true;
             this._loadInitialData();

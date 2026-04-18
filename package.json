@@ -4,7 +4,8 @@
     "sync": "npx cap sync",
     "open:android": "npx cap open android",
     "open:ios": "npx cap open ios",
-    "build": "echo 'No build step required for this project.' && npx cap copy"
+    "build": "echo 'No build step required for this project.' && npx cap copy",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.2",

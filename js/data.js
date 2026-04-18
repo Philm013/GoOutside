@@ -89,7 +89,8 @@ export const data = {
         if (typeof s.catalogue !== 'object' || s.catalogue === null) s.catalogue = {};
         if (!Array.isArray(s.badges)) s.badges = [];
         if (typeof s.settings !== 'object') s.settings = {};
-        if (typeof s.discoveryPoints !== 'number') s.discoveryPoints = (raw.xp || 0);
+        // Migrate from old xp field: only if raw had no discoveryPoints of its own
+        if (!('discoveryPoints' in (raw || {})) && raw && raw.xp) s.discoveryPoints = raw.xp;
         // Migrate old catalogue entries lacking iconic field
         for (const [k, v] of Object.entries(s.catalogue)) {
             if (!v.iconic) s.catalogue[k].iconic = 'Animalia';

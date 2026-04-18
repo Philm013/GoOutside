@@ -15,6 +15,7 @@ export const identify = {
     kgSelections: {},
     kgStep: 0,
     kgResults: [],
+    selectedTraits: {},
 
     init(app) {
         this.app = app;
@@ -181,6 +182,16 @@ export const identify = {
                         { id: 'white_pale',   label: 'White/Pale',      color: '#e8e8e8', border: true },
                         { id: 'colorful',     label: 'Multi-colored',   icon: '🌈' }
                     ]
+                },
+                {
+                    id: 'habitat', question: 'Where did you find it?',
+                    options: [
+                        { id: 'forest',  label: 'Forest/Woodland',    icon: '🌲' },
+                        { id: 'meadow',  label: 'Meadow/Garden',      icon: '🌸' },
+                        { id: 'water',   label: 'Near Water',         icon: '💧' },
+                        { id: 'urban',   label: 'Urban/Indoor',       icon: '🏙️' },
+                        { id: 'any',     label: 'Not sure',           icon: '🌍' }
+                    ]
                 }
             ]
         },
@@ -205,6 +216,17 @@ export const identify = {
                         { id: 'rocky',     label: 'Rocky/Sandy',       icon: '🪨' },
                         { id: 'urban',     label: 'Urban/Garden',      icon: '🏘️' }
                     ]
+                },
+                {
+                    id: 'color', question: 'What best describes the coloring/pattern?', multi: true,
+                    options: [
+                        { id: 'brown_gray',  label: 'Brown/Gray',      color: '#8B6914' },
+                        { id: 'green',       label: 'Green',           color: '#27ae60' },
+                        { id: 'black',       label: 'Black',           color: '#1a1a1a' },
+                        { id: 'striped',     label: 'Striped',         icon: '〰️' },
+                        { id: 'spotted',     label: 'Spotted/Blotched',icon: '🔵' },
+                        { id: 'orange_red',  label: 'Orange/Red',      color: '#e74c3c' }
+                    ]
                 }
             ]
         },
@@ -227,6 +249,16 @@ export const identify = {
                         { id: 'spotted',      label: 'Spotted/Patterned', icon: '🔵' },
                         { id: 'red_orange',   label: 'Red/Orange',     color: '#e74c3c' },
                         { id: 'black_yellow', label: 'Black & Yellow', color: '#f1c40f' }
+                    ]
+                },
+                {
+                    id: 'habitat', question: 'Where did you find it?',
+                    options: [
+                        { id: 'pond_lake',  label: 'Pond/Lake',        icon: '🏞️' },
+                        { id: 'stream',     label: 'Stream/River',     icon: '🌊' },
+                        { id: 'forest',     label: 'Forest/Leaf Litter',icon: '🌲' },
+                        { id: 'meadow',     label: 'Meadow/Grass',     icon: '🌾' },
+                        { id: 'underground',label: 'Under rocks/logs', icon: '🪨' }
                     ]
                 }
             ]
