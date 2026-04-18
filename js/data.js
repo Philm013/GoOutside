@@ -1,90 +1,116 @@
 export const data = {
-    async fetchSpecies(app) {
-        const lat = app.map.pos.lat || 40.71;
-        const lng = app.map.pos.lng || -74.00;
-        try {
-            // Increased per_page to 500 for a much larger field guide
-            const res = await fetch(`https://api.inaturalist.org/v1/observations/species_counts?lat=${lat}&lng=${lng}&radius=50&month=${new Date().getMonth() + 1}&iconic_taxa=Plantae,Aves,Mammalia,Insecta,Amphibia,Reptilia&verifiable=true&per_page=500`);
-            const json = await res.json();
-            app.localSpecies = json.results.map(i => {
-                const c = i.count;
-                return {
-                    id: i.taxon.id,
-                    name: i.taxon.preferred_common_name || i.taxon.name,
-                    img: i.taxon.default_photo?.medium_url,
-                    category: i.taxon.iconic_taxon_name,
-                    xp: Math.round(1000 / (c + 10)),
-                    seeds: Math.round(100 / (c + 10)),
-                    rarity: c > 100 ? 'Common' : c > 20 ? 'Uncommon' : 'Rare'
-                };
-            }).filter(s => s.img).sort((a, b) => a.name.localeCompare(b.name));
-            if (app.ui) app.ui.renderFieldGuide(true);
-        } catch (e) {
-            console.error("Failed to fetch species:", e);
-        }
-    },
-    getSpecies(app, id) {
-        return app.localSpecies.find(s => s.id == id);
-    },
-    calcLevel(xp) {
-        let lvl = 1, req = 100;
-        while (xp >= req) {
-            xp -= req;
+    VERSION: 4,
+
+    LEVEL_TITLES: [
+        'Curious Naturalist', 'Field Observer', 'Nature Enthusiast',
+        'Wildlife Tracker', 'Ecosystem Explorer', 'Species Specialist',
+        'Conservation Guardian', 'Master Naturalist', 'Nature Sage', 'Earth Steward'
+    ],
+
+    BADGES: [
+        { id: 'first_obs',      icon: '🌱', name: 'First Steps',        desc: 'Log your first observation.',        test: s => s.observations.length >= 1 },
+        { id: 'obs_5',          icon: '👀', name: 'Keen Eye',            desc: 'Log 5 observations.',                test: s => s.observations.length >= 5 },
+        { id: 'obs_25',         icon: '📒', name: 'Field Notes',         desc: 'Log 25 observations.',               test: s => s.observations.length >= 25 },
+        { id: 'obs_100',        icon: '🏅', name: 'Centurion',           desc: 'Log 100 observations.',              test: s => s.observations.length >= 100 },
+        { id: 'spp_10',         icon: '🗂️', name: 'Collector',           desc: 'Catalogue 10 species.',              test: s => Object.keys(s.catalogue).length >= 10 },
+        { id: 'spp_50',         icon: '📚', name: 'Encyclopedist',       desc: 'Catalogue 50 species.',              test: s => Object.keys(s.catalogue).length >= 50 },
+        { id: 'streak_3',       icon: '🔥', name: 'Daily Observer',      desc: 'Maintain a 3-day streak.',           test: s => s.streak >= 3 },
+        { id: 'streak_7',       icon: '⚡', name: 'Week in the Wild',    desc: 'Maintain a 7-day streak.',           test: s => s.streak >= 7 },
+        { id: 'streak_30',      icon: '🌟', name: 'Month of Nature',     desc: 'Maintain a 30-day streak.',          test: s => s.streak >= 30 },
+        { id: 'bird_10',        icon: '🐦', name: 'Bird Watcher',        desc: 'Catalogue 10 bird species.',         test: s => Object.values(s.catalogue).filter(c => c.iconic === 'Aves').length >= 10 },
+        { id: 'plant_10',       icon: '🌿', name: 'Botanist',            desc: 'Catalogue 10 plant species.',        test: s => Object.values(s.catalogue).filter(c => c.iconic === 'Plantae').length >= 10 },
+        { id: 'insect_10',      icon: '🦋', name: 'Entomologist',        desc: 'Catalogue 10 insect species.',       test: s => Object.values(s.catalogue).filter(c => c.iconic === 'Insecta').length >= 10 },
+        { id: 'mammal_5',       icon: '🦊', name: 'Mammal Tracker',      desc: 'Catalogue 5 mammal species.',        test: s => Object.values(s.catalogue).filter(c => c.iconic === 'Mammalia').length >= 5 },
+        { id: 'all_taxa',       icon: '🌍', name: 'Citizen Scientist',   desc: 'Observe 6 different taxa groups.',   test: s => new Set(Object.values(s.catalogue).map(c => c.iconic)).size >= 6 },
+        { id: 'first_audio_id', icon: '🎤', name: 'Ear to the Ground',   desc: 'Use the Audio ID tool.',             test: s => s._usedAudioId === true },
+        { id: 'first_key_out',  icon: '🔬', name: 'Nature Detective',    desc: 'Use the Knowledge Graph ID.',        test: s => s._usedKeyOut === true },
+    ],
+
+    calcLevel(dp) {
+        let lvl = 1, req = 500;
+        let remaining = dp;
+        while (remaining >= req) {
+            remaining -= req;
             lvl++;
-            req = Math.floor(req * 1.5);
+            req = Math.floor(req * 1.8);
         }
-        return { level: lvl, curr: xp, req, pct: (xp / req) * 100 };
+        const title = this.LEVEL_TITLES[Math.min(lvl - 1, this.LEVEL_TITLES.length - 1)];
+        return { level: lvl, curr: remaining, req, pct: (remaining / req) * 100, title };
     },
-    decorCatalog() {
-        return [
-            { id: 'wildflower_patch', name: 'Wildflower Patch', icon: '🌼', cost: 35, category: 'Flora', desc: 'A pollinator-friendly color burst for your sanctuary.' },
-            { id: 'mossy_log', name: 'Mossy Log', icon: '🪵', cost: 45, category: 'Habitat', desc: 'A cozy perch and shelter for small wildlife.' },
-            { id: 'bird_bath', name: 'Bird Bath', icon: '⛲', cost: 80, category: 'Feature', desc: 'Attracts more feathered visitors to your home world.' },
-            { id: 'owl_box', name: 'Nest Box', icon: '🪺', cost: 60, category: 'Habitat', desc: 'A nesting spot for local birds.' },
-            { id: 'stone_path', name: 'Stone Path', icon: '🪨', cost: 30, category: 'Structure', desc: 'Adds a gentle path through your nature space.' },
-            { id: 'fern_cluster', name: 'Fern Cluster', icon: '🌿', cost: 40, category: 'Flora', desc: 'Soft green texture for shady corners.' }
-        ];
+
+    calcObservationDP(species, state) {
+        const base = species.dp || 50;
+        const catalogueEntry = state.catalogue[species.id];
+        const isFirst = !catalogueEntry;
+        const streakBonus = Math.min(state.streak, 30) * 0.01; // up to +30%
+        let dp = base;
+        if (isFirst) dp *= 2;
+        dp = Math.round(dp * (1 + streakBonus));
+        return dp;
     },
+
+    checkBadges(state) {
+        const newBadges = [];
+        for (const badge of this.BADGES) {
+            if (!state.badges.includes(badge.id) && badge.test(state)) {
+                state.badges.push(badge.id);
+                newBadges.push(badge);
+            }
+        }
+        return newBadges;
+    },
+
+    updateStreak(state) {
+        const today = new Date().toDateString();
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        if (state.lastSeen === today) return; // already counted today
+        if (state.lastSeen === yesterday) {
+            state.streak = (state.streak || 0) + 1;
+        } else if (state.lastSeen !== today) {
+            state.streak = 1; // reset
+        }
+        state.longestStreak = Math.max(state.streak, state.longestStreak || 0);
+        state.lastSeen = today;
+    },
+
+    // Current month name for season display
+    currentSeason() {
+        const m = new Date().getMonth();
+        if (m >= 2 && m <= 4) return { name: 'Spring', icon: '🌸', color: 'pink' };
+        if (m >= 5 && m <= 7) return { name: 'Summer', icon: '☀️', color: 'amber' };
+        if (m >= 8 && m <= 10) return { name: 'Autumn', icon: '🍂', color: 'orange' };
+        return { name: 'Winter', icon: '❄️', color: 'blue' };
+    },
+
     normalizeState(raw = {}) {
-        const defaults = this.defaultState();
-        const next = {
-            ...defaults,
-            ...raw,
-            quests: {
-                ...defaults.quests,
-                ...(raw.quests || {}),
-                daily: {
-                    ...defaults.quests.daily,
-                    ...((raw.quests && raw.quests.daily) || {})
-                }
-            }
-        };
-
-        if (!next.speciesData || typeof next.speciesData !== 'object') next.speciesData = {};
-        if (!Array.isArray(next.sightingsLog)) next.sightingsLog = [];
-        if (!next.decorInventory || typeof next.decorInventory !== 'object') next.decorInventory = {};
-        if (!Array.isArray(next.sanctuaryPlaced)) next.sanctuaryPlaced = [];
-
-        return next;
-    },
-    defaultState: () => ({
-        username: `Explorer${Math.floor(Math.random() * 999)}`,
-        xp: 0,
-        seeds: 0,
-        streak: 1,
-        lastLogin: new Date().toDateString(),
-        avatar: '🦋',
-        speciesData: {},
-        sightingsLog: [],
-        decorInventory: {},
-        sanctuaryPlaced: [],
-        quests: {
-            daily: {
-                description: "Document 3 verified sightings",
-                progress: 0,
-                target: 3,
-                rewards: { xp: 150, seeds: 50 }
-            }
+        const def = this.defaultState();
+        const s = { ...def, ...raw };
+        if (!Array.isArray(s.observations)) s.observations = [];
+        if (typeof s.catalogue !== 'object' || s.catalogue === null) s.catalogue = {};
+        if (!Array.isArray(s.badges)) s.badges = [];
+        if (typeof s.settings !== 'object') s.settings = {};
+        if (typeof s.discoveryPoints !== 'number') s.discoveryPoints = (raw.xp || 0);
+        // Migrate old catalogue entries lacking iconic field
+        for (const [k, v] of Object.entries(s.catalogue)) {
+            if (!v.iconic) s.catalogue[k].iconic = 'Animalia';
         }
-    })
+        return s;
+    },
+
+    defaultState() {
+        return {
+            version: this.VERSION,
+            username: `Naturalist${Math.floor(Math.random() * 9999)}`,
+            avatar: '🦋',
+            bio: '',
+            discoveryPoints: 0,
+            streak: 0,
+            longestStreak: 0,
+            lastSeen: '',
+            observations: [],
+            catalogue: {},
+            badges: [],
+            settings: { birdnetApiUrl: '', birdnetToken: '' }
+        };
+    }
 };

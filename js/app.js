@@ -1,60 +1,46 @@
 import { haptics } from './haptics.js';
 import { hud } from './hud.js';
-import { multiplayer } from './multiplayer.js';
 import { ui } from './ui.js';
-import { game } from './game.js';
 import { data } from './data.js';
 import { map } from './map.js';
+import { inat } from './inat.js';
+import { identify } from './identify.js';
+import { journal } from './journal.js';
 
 const app = {
     state: {},
     localSpecies: [],
-    haptics,
-    hud,
-    multiplayer,
-    ui,
-    game,
-    data,
-    map,
+    haptics, hud, ui, data, map, inat, identify, journal,
 
     async init() {
-        const storedV3 = localStorage.getItem('NQ_State_FINAL_V3');
-        const storedV2 = localStorage.getItem('NQ_State_FINAL_V2');
-        const rawState = storedV3 ? JSON.parse(storedV3) : (storedV2 ? JSON.parse(storedV2) : this.data.defaultState());
-        this.state = this.data.normalizeState(rawState);
-        
-        // Initialize modules
+        const raw = JSON.parse(localStorage.getItem('EDE_State_V4') || 'null')
+            || JSON.parse(localStorage.getItem('NQ_State_FINAL_V3') || 'null')
+            || null;
+        this.state = this.data.normalizeState(raw || {});
+
         this.hud.init(this);
         this.ui.init(this);
-        this.game.init(this);
         this.map.init(this);
-        this.multiplayer.init(this);
+        this.identify.init(this);
+        this.journal.init(this);
 
-        // Global search listeners
-        ['fieldguide-search', 'inventory-search', 'species-selector-search'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('input', (e) => {
-                    const panel = id.split('-')[0];
-                    if (panel === 'fieldguide') this.ui.renderFieldGuide(true);
-                    else if (panel === 'inventory') this.ui.renderInventory();
-                    else this.ui.renderGrid('species-selector-body', this.localSpecies, 'species-selector-search', 'species-selector-tabs', true);
-                });
-            }
+        // Search listeners
+        document.getElementById('journal-search')?.addEventListener('input', () => {
+            this.journal._renderTimeline();
+        });
+        document.getElementById('species-selector-search')?.addEventListener('input', () => {
+            this.ui._renderSpeciesSelectorBody();
         });
 
-        this.ui.renderProfile();
+        this.ui.renderHUDStats();
         this.ui.openPanel('map');
     },
 
     saveState() {
-        localStorage.setItem('NQ_State_FINAL_V3', JSON.stringify(this.state));
+        localStorage.setItem('EDE_State_V4', JSON.stringify(this.state));
     }
 };
 
-// Expose app to window for inline onclick handlers (to maintain compatibility with current HTML)
 window.app = app;
-
 window.onload = () => app.init();
-
 export default app;
