@@ -45,6 +45,8 @@ export const ui = {
         }
         const sheet = document.getElementById('home-sheet');
         if (sheet) sheet.style.visibility = isMap ? 'visible' : 'hidden';
+        // Collapse the sheet whenever navigating away from map
+        if (!isMap && this.app.hud && this.app.hud.peekHomeSheet) this.app.hud.peekHomeSheet();
         const mapControls = document.getElementById('map-controls');
         if (mapControls) { mapControls.style.opacity = isMap ? '1' : '0'; mapControls.style.pointerEvents = isMap ? 'auto' : 'none'; }
         if (this.app.haptics) this.app.haptics.vibrate();

@@ -88,22 +88,28 @@ body { background: var(--paper); overflow: hidden; }
     margin-bottom: 28px;
     letter-spacing: 0.2px;
 }
-#loading-dots {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 20px;
+#loading-progress-wrap {
+    width: 200px;
+    height: 4px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 2px;
+    margin-bottom: 10px;
+    overflow: hidden;
 }
-#loading-dots span {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: #52b788;
-    animation: dotPulse 1.2s ease-in-out infinite;
+#loading-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #52b788, #95d5b2);
+    border-radius: 2px;
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
 }
-#loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-#loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-@keyframes dotPulse {
-    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-    40%           { transform: scale(1);   opacity: 1;   }
+#loading-status {
+    font-size: 12px;
+    color: #52b788;
+    margin-bottom: 16px;
+    letter-spacing: 0.1px;
+    min-height: 16px;
+    transition: opacity 0.3s ease;
 }
 #loading-flavor {
     font-size: 12px;
@@ -220,27 +226,35 @@ body { background: var(--paper); overflow: hidden; }
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
     z-index: 25;
-    transition: top 0.35s cubic-bezier(0.4,0,0.2,1);
+    transition: top 0.38s cubic-bezier(0.34,1.38,0.64,1);
     min-height: 200px;
     padding-bottom: var(--nav-h);
-    /* Don't intercept vertical gestures on the sheet body */
     touch-action: pan-y;
 }
 @media (prefers-color-scheme: dark) {
     #home-sheet { background: var(--surface-dk); box-shadow: 0 -8px 32px rgba(0,0,0,0.45); }
 }
 #home-sheet-handle {
-    /* Must NOT have touch-action pan so browser doesn't steal our touchstart */
     touch-action: none;
+    padding: 14px 0 8px;
+    cursor: grab;
+    user-select: none;
 }
+#home-sheet-handle:active { cursor: grabbing; }
 #home-sheet-handle-bar {
     width: 44px; height: 5px;
     background: #c5c9c2;
     border-radius: 3px;
     margin: 0 auto;
-    cursor: grab;
+    transition: width 0.3s ease, background 0.2s ease;
 }
+#home-sheet-handle:active #home-sheet-handle-bar { background: var(--brand-lt); }
 @media (prefers-color-scheme: dark) { #home-sheet-handle-bar { background: #4b5563; } }
+#home-sheet-content {
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    max-height: calc(100vh - 80px);
+}
 .hs-today-row {
     display: flex;
     justify-content: center;
