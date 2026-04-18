@@ -1,7 +1,6 @@
-// iNaturalist API module — v1/v2 hybrid (v2 for observations, v1 for taxa)
+// iNaturalist API module — v2 REST API (unauthenticated)
 export const inat = {
-    V1: 'https://api.inaturalist.org/v1',
-    V2: 'https://api.inaturalist.org/v2',
+    BASE: 'https://api.inaturalist.org/v2',
 
     // Cache: { key → { data, ts } }
     _cache: {},
@@ -16,6 +15,21 @@ export const inat = {
         return data;
     },
 
+    // Shared field sets
+    OBS_FIELDS: [
+        'id', 'observed_on', 'place_guess', 'location', 'description',
+        'taxon.id', 'taxon.name', 'taxon.preferred_common_name',
+        'taxon.iconic_taxon_name',
+        'taxon.default_photo.url', 'taxon.default_photo.medium_url', 'taxon.default_photo.square_url',
+        'photos.url', 'user.login', 'user.icon_url'
+    ].join(','),
+
+    TAXON_FIELDS: [
+        'taxon.id', 'taxon.name', 'taxon.preferred_common_name',
+        'taxon.iconic_taxon_name',
+        'taxon.default_photo.url', 'taxon.default_photo.medium_url', 'taxon.default_photo.square_url'
+    ].join(','),
+
     // Nearby community observations (for map & discover feed)
     async nearbyObservations(lat, lng, { radius = 30, limit = 60, days = 14, iconic = null } = {}) {
         const d = new Date();
@@ -27,8 +41,11 @@ export const inat = {
         if (cached) return cached;
         try {
             const res = await fetch(
-                `${this.V1}/observations?lat=${lat}&lng=${lng}&radius=${radius}&d1=${since}&order_by=created_at&order=desc&per_page=${limit}&photos=true&verifiable=true${iconicParam}`
+                `${this.BASE}/observations?lat=${lat}&lng=${lng}&radius=${radius}&d1=${since}` +
+                `&order_by=observed_on&order=desc&per_page=${limit}` +
+                `&has[]=photos&verifiable=true${iconicParam}&fields=${this.OBS_FIELDS}`
             );
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
             return this._set(key, json.results || []);
         } catch (e) {
@@ -46,18 +63,21 @@ export const inat = {
         if (cached) return cached;
         try {
             const res = await fetch(
-                `${this.V1}/observations/species_counts?lat=${lat}&lng=${lng}&radius=${radius}&month=${month}${iconicParam}&verifiable=true&per_page=${limit}`
+                `${this.BASE}/observations/species_counts?lat=${lat}&lng=${lng}&radius=${radius}` +
+                `&month=${month}${iconicParam}&verifiable=true&per_page=${limit}&fields=${this.TAXON_FIELDS}`
             );
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
             const results = (json.results || []).map(i => {
                 const c = i.count;
+                const t = i.taxon;
                 return {
-                    id: i.taxon.id,
-                    name: i.taxon.preferred_common_name || i.taxon.name,
-                    sciName: i.taxon.name,
-                    img: i.taxon.default_photo?.medium_url,
-                    squareImg: i.taxon.default_photo?.square_url,
-                    iconic: i.taxon.iconic_taxon_name,
+                    id: t.id,
+                    name: t.preferred_common_name || t.name,
+                    sciName: t.name,
+                    img: t.default_photo?.medium_url,
+                    squareImg: t.default_photo?.square_url,
+                    iconic: t.iconic_taxon_name,
                     count: c,
                     rarity: c > 100 ? 'Common' : c > 20 ? 'Uncommon' : 'Rare',
                     dp: Math.round(c > 100 ? 50 : c > 20 ? 100 : 200)
@@ -79,9 +99,11 @@ export const inat = {
         const cached = this._get(key);
         if (cached) return cached;
         try {
+            const fields = 'id,name,preferred_common_name,iconic_taxon_name,default_photo.square_url,default_photo.medium_url';
             const res = await fetch(
-                `${this.V1}/taxa/autocomplete?q=${encodeURIComponent(q)}&per_page=${limit}${iconicParam}${locationParam}`
+                `${this.BASE}/taxa/autocomplete?q=${encodeURIComponent(q)}&per_page=${limit}${iconicParam}${locationParam}&fields=${fields}`
             );
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
             return this._set(key, json.results || []);
         } catch (e) {
@@ -96,7 +118,11 @@ export const inat = {
         const cached = this._get(key);
         if (cached) return cached;
         try {
-            const res = await fetch(`${this.V1}/taxa/${id}`);
+            const fields = 'id,name,preferred_common_name,iconic_taxon_name,wikipedia_summary,' +
+                'default_photo.url,default_photo.medium_url,default_photo.square_url,' +
+                'taxon_photos.photo.url,taxon_photos.photo.medium_url';
+            const res = await fetch(`${this.BASE}/taxa/${id}?fields=${fields}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
             const t = (json.results || [])[0];
             return t ? this._set(key, t) : null;
@@ -106,7 +132,7 @@ export const inat = {
         }
     },
 
-    // Top species for an iconic taxon, limited to nearby+season — used by knowledge graph
+    // Top species for an iconic taxon — used by knowledge graph
     async queryByTraits(lat, lng, { iconic, q = null, month = null, limit = 24 } = {}) {
         const m = month || (new Date().getMonth() + 1);
         const qParam = q ? `&q=${encodeURIComponent(q)}` : '';
@@ -114,10 +140,11 @@ export const inat = {
         const cached = this._get(key);
         if (cached) return cached;
         try {
-            // Use species_counts filtered by iconic taxon and location/month
             const res = await fetch(
-                `${this.V1}/observations/species_counts?lat=${lat}&lng=${lng}&radius=100&month=${m}&iconic_taxa=${iconic}&verifiable=true&per_page=${limit}${qParam}`
+                `${this.BASE}/observations/species_counts?lat=${lat}&lng=${lng}&radius=100` +
+                `&month=${m}&iconic_taxa=${iconic}&verifiable=true&per_page=${limit}${qParam}&fields=${this.TAXON_FIELDS}`
             );
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
             return this._set(key, (json.results || []).map(i => ({
                 id: i.taxon.id,
@@ -139,9 +166,7 @@ export const inat = {
 
     // Top species for "In Season" spotlight
     async spotlight(lat, lng) {
-        const month = new Date().getMonth() + 1;
         const allObs = await this.seasonalSpecies(lat, lng, { limit: 100 });
-        // Pick interesting species: medium rarity, has photo
         const picks = allObs.filter(s => s.rarity !== 'Common').slice(0, 6);
         if (picks.length < 3) return allObs.slice(0, 6);
         return picks;

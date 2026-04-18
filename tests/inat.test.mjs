@@ -111,7 +111,7 @@ describe('inat.nearbyObservations() with mocked fetch', () => {
 
     beforeEach(() => {
         inat._cache = {};
-        global.fetch = async () => ({ json: async () => ({ results: mockObs }) });
+        global.fetch = async () => ({ ok: true, json: async () => ({ results: mockObs }) });
     });
 
     test('returns array from API results', async () => {
@@ -121,7 +121,7 @@ describe('inat.nearbyObservations() with mocked fetch', () => {
 
     test('caches result on second call (fetch not called again)', async () => {
         let calls = 0;
-        global.fetch = async () => { calls++; return { json: async () => ({ results: mockObs }) }; };
+        global.fetch = async () => { calls++; return { ok: true, json: async () => ({ results: mockObs }) }; };
         await inat.nearbyObservations(40.71, -74.00);
         await inat.nearbyObservations(40.71, -74.00);
         assert.equal(calls, 1);
@@ -138,6 +138,7 @@ describe('inat.seasonalSpecies() result shaping', () => {
     beforeEach(() => {
         inat._cache = {};
         global.fetch = async () => ({
+            ok: true,
             json: async () => ({
                 results: [
                     {
@@ -206,7 +207,7 @@ describe('inat.seasonalSpecies() result shaping', () => {
 describe('inat.searchTaxa() query guard', () => {
     beforeEach(() => {
         inat._cache = {};
-        global.fetch = async () => ({ json: async () => ({ results: [{ id: 1 }] }) });
+        global.fetch = async () => ({ ok: true, json: async () => ({ results: [{ id: 1 }] }) });
     });
 
     test('returns [] for empty query', async () => {
