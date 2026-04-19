@@ -90,7 +90,7 @@
 <div id="map" class="fixed inset-0 z-0 bg-gray-200 dark:bg-gray-900"></div>
 
 <!-- ══ HUD LAYER ══════════════════════════════════════════════ -->
-<div class="fixed inset-0 z-10 pointer-events-none">
+<div class="fixed inset-0 z-[30] pointer-events-none">
 
     <!-- Top bar -->
     <div class="pointer-events-auto flex justify-between items-start w-full p-3 pt-safe-t gap-2">
@@ -123,7 +123,7 @@
 
     <!-- Recenter + compass + layers -->
     <div class="absolute right-3 pointer-events-auto flex flex-col gap-2 transition-all duration-300"
-         id="map-controls" style="bottom: calc(var(--nav-h) + 176px)">
+         id="map-controls" style="bottom: calc(var(--nav-h) + 88px)">
         <button onclick="app.map.recenter()"
             class="w-11 h-11 bg-white dark:bg-surface-dark rounded-2xl shadow-lg flex items-center justify-center text-brand active:scale-95 transition-transform border border-gray-100 dark:border-gray-700">
             <span class="material-symbols-rounded text-2xl">my_location</span>
@@ -165,9 +165,18 @@
 </div>
 
 <!-- ══ HOME BOTTOM SHEET ══════════════════════════════════════ -->
-<div id="home-sheet" class="z-25">
-    <div id="home-sheet-handle" style="padding: 14px 0 10px; touch-action: none; cursor: grab; user-select: none;">
+<div id="home-sheet">
+    <div id="home-sheet-handle">
         <div id="home-sheet-handle-bar"></div>
+        <!-- Compact dock bar: only shown in dock state via .is-dock class on #home-sheet -->
+        <div id="home-sheet-dock-bar">
+            <div class="dock-avatar" id="dock-avatar">🌿</div>
+            <div class="dock-info">
+                <div class="dock-summary" id="dock-summary">Earth Day Everyday</div>
+                <div class="dock-stats" id="dock-stats-line">Tap to explore nature nearby</div>
+            </div>
+            <span class="material-symbols-rounded dock-chevron">expand_less</span>
+        </div>
     </div>
     <div id="home-sheet-content">
         <!-- Filled by hud.refreshHomeSheet() -->
@@ -577,6 +586,6 @@
      style="bottom: calc(var(--nav-h) + 8px)"></div>
 
 <!-- APP LOGIC -->
-<script type="module" src="js/app.js?v=20260419b"></script>
+<script type="module" src="js/app.js?v=20260419c"></script>
 </body>
 </html>

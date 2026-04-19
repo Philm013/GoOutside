@@ -22,7 +22,8 @@
 
 /* ── Base ─────────────────────────────────────────────────────── */
 * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-body { background: var(--paper); overflow: hidden; }
+html { overscroll-behavior: none; }
+body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
 
 .safe-t  { padding-top: env(safe-area-inset-top); }
 .safe-b  { padding-bottom: env(safe-area-inset-bottom); }
@@ -317,9 +318,10 @@ body { background: var(--paper); overflow: hidden; }
 }
 #home-sheet-handle {
     touch-action: none;
-    padding: 14px 0 8px;
+    padding: 12px 0 0;
     cursor: grab;
     user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 #home-sheet-handle:active { cursor: grabbing; }
 #home-sheet-handle-bar {
@@ -331,6 +333,25 @@ body { background: var(--paper); overflow: hidden; }
 }
 #home-sheet-handle:active #home-sheet-handle-bar { background: var(--brand-lt); }
 @media (prefers-color-scheme: dark) { #home-sheet-handle-bar { background: #4b5563; } }
+#home-sheet-dock-bar {
+    display: none;
+    align-items: center;
+    padding: 8px 16px 14px;
+    gap: 12px;
+    pointer-events: none;
+}
+#home-sheet.is-dock #home-sheet-dock-bar { display: flex; }
+.dock-avatar { font-size: 26px; line-height: 1; flex-shrink: 0; }
+.dock-info { flex: 1; min-width: 0; }
+.dock-summary { font-size: 13px; font-weight: 700; color: var(--brand); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-stats { font-size: 11px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.dock-chevron { font-size: 20px; color: #c5c9c2; flex-shrink: 0; transition: transform 0.3s ease; }
+#home-sheet:not(.is-dock) .dock-chevron { transform: rotate(180deg); }
+@media (prefers-color-scheme: dark) {
+    .dock-summary { color: var(--brand-lt); }
+    .dock-stats { color: #6b7280; }
+    .dock-chevron { color: #4b5563; }
+}
 #home-sheet-content {
     flex: 1;
     min-height: 0;
@@ -527,6 +548,12 @@ body { background: var(--paper); overflow: hidden; }
     width: 100%; aspect-ratio: 1;
     overflow: hidden;
     background: var(--brand-xlt);
+    position: relative;
+}
+.species-discover-img img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
 }
 .species-discover-body {
     padding: 8px 10px 10px;

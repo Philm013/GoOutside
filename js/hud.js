@@ -52,9 +52,23 @@ export const hud = {
         if (avEl) avEl.textContent = s.avatar;
     },
 
-    // Public: snap to peek from anywhere (call on selection/nav)
+    refreshDockBar() {
+        const s = this.app.state;
+        const today = new Date().toDateString();
+        const todayObs = (s.observations || []).filter(o => new Date(o.date).toDateString() === today).length;
+        const lv = this.app.data.calcLevel(s.discoveryPoints);
+        const sppCount = Object.keys(s.catalogue || {}).length;
+        const avEl = document.getElementById('dock-avatar');
+        if (avEl) avEl.textContent = s.avatar || '🌿';
+        const sumEl = document.getElementById('dock-summary');
+        if (sumEl) sumEl.textContent = `Lv.${lv.level} · ${sppCount} species found`;
+        const statsEl = document.getElementById('dock-stats-line');
+        if (statsEl) statsEl.textContent = `${todayObs} found today · 🔥 ${s.streak} day streak`;
+    },
+
+    // Public: snap to dock from anywhere (call on selection/nav)
     peekHomeSheet() {
-        this._snapTo('peek');
+        this._snapTo('dock');
     },
 
     _initHomeSheet() {
@@ -63,45 +77,57 @@ export const hud = {
         const content = document.getElementById("home-sheet-content");
         if (!sheet || !handle) return;
 
-        // ── Snap points ─────────────────────────────────────────────
-        const STATES = ['peek', 'mid', 'full'];
+        // Nav bar actual height (includes safe-area-inset-bottom)
+        const navH = () => document.getElementById('bottom-nav')?.offsetHeight || 64;
+
+        // ── Snap points: measured as sheet's top edge from screen top ───
+        // Visible height above nav = (window.innerHeight - navH()) - top
         const SNAPS = {
-            peek: () => window.innerHeight - 148,
-            mid:  () => window.innerHeight - 340,
-            full: () => Math.max(72, window.innerHeight - 560),
+            dock: () => window.innerHeight - navH() - 72,   // 72px visible above nav
+            peek: () => window.innerHeight - navH() - 300,  // 300px visible
+            mid:  () => window.innerHeight - navH() - 460,  // 460px visible
+            full: () => Math.max(56, window.innerHeight - navH() - Math.min(680, window.innerHeight - navH() - 80)),
+        };
+        const STATES = ['dock', 'peek', 'mid', 'full'];
+
+        // ── Apply dock/expanded class for CSS ───────────────────────────
+        const applyClass = (state) => {
+            sheet.classList.toggle('is-dock', state === 'dock');
         };
 
-        // ── Content scroll: only allowed at full ────────────────────
+        // ── Content scroll: only allowed at full ────────────────────────
         const updateScroll = (state) => {
             if (!content) return;
             content.style.overflowY = state === 'full' ? 'auto' : 'hidden';
         };
 
-        // ── Snap animation ──────────────────────────────────────────
+        // ── Snap animation ──────────────────────────────────────────────
         this._snapTo = (state, fast = false) => {
             this._snapState = state;
-            this.homeSheetOpen = state !== 'peek';
+            this.homeSheetOpen = state !== 'dock';
             const dur = fast ? '0.22s' : '0.38s';
             const ease = fast
-                ? 'cubic-bezier(0.22,1,0.36,1)'          // fast: smooth decelerate
-                : 'cubic-bezier(0.34,1.38,0.64,1)';      // normal: slight spring
+                ? 'cubic-bezier(0.22,1,0.36,1)'
+                : 'cubic-bezier(0.34,1.38,0.64,1)';
             sheet.style.transition = `top ${dur} ${ease}`;
             sheet.style.top = SNAPS[state]() + 'px';
+            applyClass(state);
             updateScroll(state);
-            // Update handle bar width as visual cue
             const bar = document.getElementById("home-sheet-handle-bar");
-            if (bar) bar.style.width = state === 'peek' ? '44px' : state === 'mid' ? '36px' : '28px';
+            if (bar) bar.style.width = state === 'dock' ? '44px' : state === 'peek' ? '40px' : state === 'mid' ? '36px' : '28px';
+            // Keep map controls above dock bar (88px clearance)
+            const ctrl = document.getElementById('map-controls');
+            if (ctrl) ctrl.style.bottom = `calc(var(--nav-h) + 88px)`;
         };
 
-        // ── Velocity tracking ───────────────────────────────────────
-        let history = [];  // [{y, t}]
+        // ── Velocity tracking ────────────────────────────────────────────
+        let history = [];
         const trackPoint = (y) => {
             const now = Date.now();
             history.push({ y, t: now });
             if (history.length > 6) history.shift();
         };
         const getVelocity = () => {
-            // px/ms over last ~80ms window
             const cutoff = Date.now() - 80;
             const recent = history.filter(p => p.t >= cutoff);
             if (recent.length < 2) return 0;
@@ -110,24 +136,21 @@ export const hud = {
             return dt > 0 ? (last.y - first.y) / dt : 0;
         };
 
-        // ── Snap decision on release ─────────────────────────────────
-        let startY = 0, startTop = 0, active = false, startState = 'peek';
-        let pendingStart = null; // deferred begin pending direction detection
-        const getTop = () => parseFloat(sheet.style.top) || SNAPS.peek();
+        // ── Snap decision on release ─────────────────────────────────────
+        let startY = 0, startTop = 0, active = false, startState = 'dock';
+        let pendingStart = null;
+        let dragSuppressClick = false;
+        const getTop = () => parseFloat(sheet.style.top) || SNAPS.dock();
 
         const snapOnRelease = () => {
-            const vel = getVelocity();     // positive = downward (closing)
+            const vel = getVelocity();
             const idx = STATES.indexOf(startState);
-            const FAST = 0.45;             // px/ms threshold
-
+            const FAST = 0.4;
             if (vel < -FAST) {
-                // Flick up: advance one step
                 this._snapTo(STATES[Math.min(idx + 1, STATES.length - 1)], true);
             } else if (vel > FAST) {
-                // Flick down: retreat one step
                 this._snapTo(STATES[Math.max(idx - 1, 0)], true);
             } else {
-                // Slow drag: nearest snap point by position
                 const top = getTop();
                 const nearest = STATES.reduce((best, s) =>
                     Math.abs(SNAPS[s]() - top) < Math.abs(SNAPS[best]() - top) ? s : best
@@ -136,7 +159,7 @@ export const hud = {
             }
         };
 
-        // ── Drag callbacks ──────────────────────────────────────────
+        // ── Drag callbacks ───────────────────────────────────────────────
         const begin = (y) => {
             startY = y; startTop = getTop();
             startState = this._snapState;
@@ -147,34 +170,41 @@ export const hud = {
         const move = (y) => {
             if (!active) return;
             trackPoint(y);
-            const clamped = Math.max(SNAPS.full(), Math.min(SNAPS.peek(), startTop + (y - startY)));
+            const clamped = Math.max(SNAPS.full(), Math.min(SNAPS.dock(), startTop + (y - startY)));
             sheet.style.top = clamped + 'px';
         };
         const end = () => {
             pendingStart = null;
             if (!active) return;
             active = false;
+            dragSuppressClick = true;
+            setTimeout(() => { dragSuppressClick = false; }, 300);
             snapOnRelease();
         };
 
-        // ── Touch on handle ─────────────────────────────────────────
+        // ── Touch on handle ──────────────────────────────────────────────
         handle.addEventListener('touchstart', (e) => {
             e.stopPropagation();
             begin(e.touches[0].clientY);
         }, { passive: true });
 
-        // ── Touch on content only when at top + open (drag to close) ─
+        // ── Tap on handle to open from dock ─────────────────────────────
+        handle.addEventListener('click', () => {
+            if (dragSuppressClick) return;
+            if (this._snapState === 'dock') this._snapTo('peek');
+        });
+
+        // ── Touch on content when at top + open (drag-to-close) ─────────
         if (content) {
             content.addEventListener('touchstart', (e) => {
-                if (this._snapState !== 'peek' && content.scrollTop === 0) {
+                if (this._snapState !== 'dock' && content.scrollTop === 0) {
                     pendingStart = { y: e.touches[0].clientY, x: e.touches[0].clientX };
                 }
             }, { passive: true });
         }
 
-        // ── Document-level move/end (keeps drag alive off-element) ──
+        // ── Document-level move/end ──────────────────────────────────────
         document.addEventListener('touchmove', (e) => {
-            // Resolve pending content drag — only start if movement is primarily vertical
             if (pendingStart) {
                 const dy = Math.abs(e.touches[0].clientY - pendingStart.y);
                 const dx = Math.abs(e.touches[0].clientX - pendingStart.x);
@@ -189,16 +219,16 @@ export const hud = {
         document.addEventListener('touchend',    end, { passive: true });
         document.addEventListener('touchcancel', end, { passive: true });
 
-        // ── Pointer (mouse/stylus — desktop testing) ─────────────────
+        // ── Pointer (mouse/stylus for desktop testing) ───────────────────
         handle.addEventListener('pointerdown', (e) => {
             if (e.pointerType === 'touch') return;
             handle.setPointerCapture(e.pointerId);
             begin(e.clientY);
         });
         handle.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') move(e.clientY); });
-        handle.addEventListener('pointerup',   () => { end(); });
+        handle.addEventListener('pointerup', () => { end(); });
 
-        // ── Reposition on viewport change (fullscreen, rotation) ────
+        // ── Reposition on viewport change ───────────────────────────────
         const reposition = () => {
             sheet.style.transition = 'none';
             sheet.style.top = SNAPS[this._snapState]() + 'px';
@@ -206,8 +236,11 @@ export const hud = {
         window.addEventListener('resize', reposition);
         document.addEventListener('fullscreenchange', reposition);
 
-        sheet.style.top = SNAPS.peek() + 'px';
-        updateScroll('peek');
+        // ── Initial state: dock ──────────────────────────────────────────
+        this._snapState = 'dock';
+        sheet.classList.add('is-dock');
+        sheet.style.top = SNAPS.dock() + 'px';
+        updateScroll('dock');
     },
 
     async refreshHomeSheet() {
@@ -319,6 +352,7 @@ export const hud = {
             '<button onclick="app.hud.peekHomeSheet(); app.ui.openPanel(\'panel-discover\')" class="hs-discover-btn">' +
                 '<span class="material-symbols-rounded">explore</span> Explore Nearby' +
             '</button>';
+        this.refreshDockBar();
     },
 
     // Returns a { curr, max } progress estimate for a badge

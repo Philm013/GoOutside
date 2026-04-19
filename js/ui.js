@@ -228,7 +228,7 @@ export const ui = {
         const emoji = this.app.inat.iconicEmoji(s.iconic);
         const imgSrc = s.squareImg || s.img || '';
         const imgEl = imgSrc
-            ? '<img src="' + imgSrc + '" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\"w-full h-full flex items-center justify-center text-4xl bg-brand/5\\\">' + emoji + '</div>\'">'
+            ? '<img src="' + imgSrc + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\"w-full h-full flex items-center justify-center text-4xl bg-brand/5\\\">' + emoji + '</div>\'">'
             : '<div class="w-full h-full flex items-center justify-center text-4xl bg-brand/5">' + emoji + '</div>';
         return '<button onclick="app.ui.openSpeciesDetail(' + s.id + ')" class="species-discover-card">' +
             '<div class="species-discover-img">' + imgEl + '</div>' +
