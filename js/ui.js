@@ -37,6 +37,9 @@ export const ui = {
         } else {
             document.getElementById('nav-map')?.classList.add('active');
         }
+        // Top bar: transparent + glass on map, solid on panels
+        const topBar = document.getElementById('top-bar');
+        if (topBar) topBar.classList.toggle('is-map', isMap);
         const sheet = document.getElementById('home-sheet');
         if (sheet) sheet.style.visibility = isMap ? 'visible' : 'hidden';
         // Collapse the sheet whenever navigating away from map

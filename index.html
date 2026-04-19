@@ -109,40 +109,39 @@
     </div>
 </div>
 
+<!-- ══ TOP STATUS BAR ════════════════════════════════════════════ -->
+<div id="top-bar" class="is-map">
+    <!-- Avatar + brand -->
+    <div class="flex gap-2 items-center">
+        <button onclick="app.ui.openPanel('panel-profile')"
+            class="w-11 h-11 rounded-full glass-hud shadow-md flex items-center justify-center text-2xl active:scale-95 transition-transform border border-white/40">
+            <span id="hud-avatar">🦋</span>
+        </button>
+        <div class="glass-hud px-3 py-1.5 rounded-2xl shadow-md">
+            <div class="text-[9px] font-black tracking-widest uppercase text-gray-400 dark:text-green-300/60">Earth Day</div>
+            <div class="text-sm font-black text-brand dark:text-green-300" style="font-family:Sora,sans-serif">Everyday</div>
+        </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="glass-hud px-3 py-1.5 rounded-2xl shadow-md flex items-center gap-3">
+        <div id="hud-stats-bar" class="flex items-center gap-3 text-xs font-bold">
+            <span class="hud-stat">🌸 Spring</span>
+            <span class="hud-stat text-brand">🌍 Lv.1</span>
+            <span class="hud-stat">🔥 0</span>
+        </div>
+        <button id="hud-fullscreen-btn" onclick="app.hud.toggleFullscreen()"
+            class="w-7 h-7 rounded-lg bg-white/60 dark:bg-black/30 flex items-center justify-center active:scale-90">
+            <span class="material-symbols-rounded text-sm text-gray-600 dark:text-gray-300">fullscreen</span>
+        </button>
+    </div>
+</div>
+
 <!-- ══ MAP LAYER ══════════════════════════════════════════════ -->
 <div id="map" class="fixed inset-0 z-0 bg-gray-200 dark:bg-gray-900"></div>
 
-<!-- ══ HUD LAYER ══════════════════════════════════════════════ -->
+<!-- ══ HUD LAYER (map controls only) ════════════════════════════ -->
 <div class="fixed inset-0 z-[30] pointer-events-none">
-
-    <!-- Top bar -->
-    <div class="pointer-events-auto flex justify-between items-start w-full p-3 pt-safe-t gap-2">
-
-        <!-- Avatar + brand -->
-        <div class="flex gap-2 items-center">
-            <button onclick="app.ui.openPanel('panel-profile')"
-                class="w-11 h-11 rounded-full glass-hud shadow-md flex items-center justify-center text-2xl active:scale-95 transition-transform border border-white/40">
-                <span id="hud-avatar">🦋</span>
-            </button>
-            <div class="glass-hud px-3 py-1.5 rounded-2xl shadow-md">
-                <div class="text-[9px] font-black tracking-widest uppercase text-gray-400 dark:text-green-300/60">Earth Day</div>
-                <div class="text-sm font-black text-brand dark:text-green-300" style="font-family:Sora,sans-serif">Everyday</div>
-            </div>
-        </div>
-
-        <!-- Stats bar -->
-        <div class="glass-hud px-3 py-1.5 rounded-2xl shadow-md flex items-center gap-3">
-            <div id="hud-stats-bar" class="flex items-center gap-3 text-xs font-bold">
-                <span class="hud-stat">🌸 Spring</span>
-                <span class="hud-stat text-brand">🌍 Lv.1</span>
-                <span class="hud-stat">�� 0</span>
-            </div>
-            <button onclick="app.hud.toggleFullscreen()"
-                class="w-7 h-7 rounded-lg bg-white/60 dark:bg-black/30 flex items-center justify-center active:scale-90">
-                <span class="material-symbols-rounded text-sm text-gray-600 dark:text-gray-300">fullscreen</span>
-            </button>
-        </div>
-    </div>
 
     <!-- Recenter + compass + layers -->
     <div class="absolute right-3 pointer-events-auto flex flex-col gap-2 transition-all duration-300"
@@ -210,10 +209,10 @@
 </div>
 
 <!-- ══ PANELS CONTAINER ════════════════════════════════════════ -->
-<div id="panels-container" class="fixed inset-0 z-20 pointer-events-none">
+<div id="panels-container" class="fixed left-0 right-0 bottom-0 z-20 pointer-events-none">
 
     <!-- 1. DISCOVER -->
-    <div id="panel-discover" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto pt-safe-t">
+    <div id="panel-discover" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
         <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
             <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">Discover</h2>
             <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
@@ -230,7 +229,7 @@
     </div>
 
     <!-- 2. IDENTIFY -->
-    <div id="panel-identify" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto pt-safe-t">
+    <div id="panel-identify" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
         <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
             <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">Identify</h2>
             <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
@@ -265,7 +264,7 @@
     </div>
 
     <!-- 3. JOURNAL -->
-    <div id="panel-journal" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto pt-safe-t">
+    <div id="panel-journal" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
         <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
             <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">My Journal</h2>
             <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
@@ -290,7 +289,7 @@
     </div>
 
     <!-- 4. PROFILE -->
-    <div id="panel-profile" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto pt-safe-t">
+    <div id="panel-profile" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
         <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
             <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">My Profile</h2>
             <div class="flex gap-2">
@@ -358,7 +357,7 @@
     </div>
 
     <!-- 5. SETTINGS -->
-    <div id="panel-settings" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto pt-safe-t">
+    <div id="panel-settings" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
         <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
             <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">Settings</h2>
             <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
@@ -383,8 +382,8 @@
     </div>
 
     <!-- 6. SPECIES DETAIL -->
-    <div id="panel-species-detail" class="fixed inset-0 z-40 bg-surface-light dark:bg-surface-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto pt-safe-t">
-        <div class="absolute top-3 left-3 z-20 pt-safe-t">
+    <div id="panel-species-detail" class="fixed inset-0 z-40 bg-surface-light dark:bg-surface-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <div class="absolute top-3 left-3 z-20">
             <button onclick="app.ui.closeSpeciesDetail()" class="w-10 h-10 bg-white/90 dark:bg-black/50 backdrop-blur rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform">
                 <span class="material-symbols-rounded text-gray-800 dark:text-white">arrow_back</span>
             </button>
@@ -393,8 +392,8 @@
     </div>
 
     <!-- 7. OBS DETAIL -->
-    <div id="panel-obs-detail" class="fixed inset-0 z-40 bg-surface-light dark:bg-surface-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto pt-safe-t">
-        <div class="absolute top-3 left-3 z-20 pt-safe-t">
+    <div id="panel-obs-detail" class="fixed inset-0 z-40 bg-surface-light dark:bg-surface-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <div class="absolute top-3 left-3 z-20">
             <button onclick="app.ui.closeObsDetail()" class="w-10 h-10 bg-white/90 dark:bg-black/50 backdrop-blur rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform">
                 <span class="material-symbols-rounded text-gray-800 dark:text-white">arrow_back</span>
             </button>
@@ -609,6 +608,6 @@
      style="bottom: calc(var(--nav-h) + 8px)"></div>
 
 <!-- APP LOGIC -->
-<script type="module" src="js/app.js?v=20260419d"></script>
+<script type="module" src="js/app.js?v=20260419e"></script>
 </body>
 </html>

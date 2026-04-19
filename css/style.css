@@ -12,6 +12,7 @@
     --surface:    #ffffff;
     --surface-dk: #242b1e;
     --nav-h:      calc(64px + env(safe-area-inset-bottom));
+    --top-h:      calc(60px + env(safe-area-inset-top));
 }
 @media (prefers-color-scheme: dark) {
     :root {
@@ -28,6 +29,37 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
 .safe-t  { padding-top: env(safe-area-inset-top); }
 .safe-b  { padding-bottom: env(safe-area-inset-bottom); }
 .pb-nav  { padding-bottom: var(--nav-h); }
+
+/* ── Permanent top status bar ────────────────────────────────── */
+#top-bar {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 35;
+    height: var(--top-h);
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 8px;
+    padding: env(safe-area-inset-top) 12px 8px;
+    background: var(--paper);
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+    transition: background 0.25s ease, border-color 0.25s ease;
+    pointer-events: auto;
+}
+#top-bar.is-map {
+    background: transparent;
+    border-color: transparent;
+    pointer-events: none; /* let map touches through transparent areas */
+}
+#top-bar.is-map > * { pointer-events: auto; }
+@media (prefers-color-scheme: dark) {
+    #top-bar { background: var(--paper-dark); border-bottom-color: rgba(255,255,255,0.06); }
+    #top-bar.is-map { background: transparent; border-color: transparent; }
+}
+/* Hide fullscreen toggle when not on map */
+#top-bar:not(.is-map) #hud-fullscreen-btn { display: none; }
+/* Panels container sits below top bar */
+#panels-container { top: var(--top-h) !important; }
+/* Species + obs detail overlays sit below top bar */
+#panel-species-detail,
+#panel-obs-detail { top: var(--top-h) !important; }
 
 /* ── Loading Screen ───────────────────────────────────────────── */
 #loading-screen {
