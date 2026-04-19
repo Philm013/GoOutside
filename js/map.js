@@ -73,8 +73,10 @@ export const map = {
 
     _addCommunityPin(o) {
         const [lat, lng] = o.location.split(",").map(parseFloat);
+        const taxonId = o.taxon?.id;
         const name = o.taxon?.preferred_common_name || o.taxon?.name || "Unknown";
         const photo = o.photos?.[0]?.url?.replace("square", "small");
+        const squarePhoto = o.taxon?.default_photo?.square_url || o.photos?.[0]?.url || '';
         const emoji = this.app.inat.iconicEmoji(o.taxon?.iconic_taxon_name);
         const imgHtml = photo ? "<img src=" + JSON.stringify(photo) + " class=\"com-pin-img\">" : "<div class=\"com-pin-emoji\">" + emoji + "</div>";
         const icon = L.divIcon({
@@ -84,11 +86,15 @@ export const map = {
             iconAnchor: [18, 18]
         });
         const marker = L.marker([lat, lng], { icon }).addTo(this.communityLayer);
-        marker.bindPopup(
-            "<div style=\"font-size:13px;font-weight:700;margin-bottom:3px\">" + name + "</div>" +
-            "<div style=\"font-size:11px;color:#6b7280\">" + (o.place_guess || "") + " · " + (o.observed_on || "") + "</div>" +
-            (o.user?.login ? "<div style=\"font-size:10px;color:#9ca3af;margin-top:3px\">by @" + o.user.login + "</div>" : "")
-        );
+        const popupHtml = "<div class='com-popup'>" +
+            (squarePhoto ? "<img src='" + squarePhoto + "' class='com-popup-img'>" : "<div class='com-popup-emoji'>" + emoji + "</div>") +
+            "<div class='com-popup-body'>" +
+            "<div class='com-popup-name'>" + name + "</div>" +
+            "<div class='com-popup-meta'>" + (o.place_guess || "Nearby") + " · " + (o.observed_on || "") + "</div>" +
+            (o.user?.login ? "<div class='com-popup-by'>@" + o.user.login + "</div>" : "") +
+            (taxonId ? "<button onclick=\"app.ui.openSpeciesDetail(" + taxonId + ");\" class='com-popup-btn'>View Species ›</button>" : "") +
+            "</div></div>";
+        marker.bindPopup(popupHtml, { maxWidth: 240, className: 'ede-popup' });
         this.communityMarkers.push(marker);
     },
 
@@ -110,13 +116,41 @@ export const map = {
             iconAnchor: [20, 20]
         });
         const marker = L.marker([obs.lat, obs.lng], { icon }).addTo(this.personalLayer);
-        marker.bindPopup(
-            "<div style=\"font-size:13px;font-weight:700;margin-bottom:3px\">" + String.fromCodePoint(0x1F4F7) + " " + obs.speciesName + "</div>" +
-            "<div style=\"font-size:11px;color:#059669;font-weight:600\">+" + obs.dp + " DP</div>" +
-            (obs.notes ? "<div style=\"font-size:11px;color:#6b7280;margin-top:4px\">" + obs.notes + "</div>" : "")
-        );
+        const popupHtml = "<div class='com-popup'>" +
+            (obs.photo ? "<img src='" + obs.photo + "' class='com-popup-img'>" : "<div class='com-popup-emoji'>" + emoji + "</div>") +
+            "<div class='com-popup-body'>" +
+            "<div class='com-popup-name'>" + String.fromCodePoint(0x1F4F7) + " " + obs.speciesName + "</div>" +
+            "<div class='com-popup-meta' style='color:#059669;font-weight:600'>+" + obs.dp + " DP</div>" +
+            (obs.notes ? "<div class='com-popup-meta'>" + obs.notes + "</div>" : "") +
+            (obs.taxonId ? "<button onclick=\"app.ui.openSpeciesDetail(" + obs.taxonId + ");\" class='com-popup-btn'>View Species ›</button>" : "") +
+            "</div></div>";
+        marker.bindPopup(popupHtml, { maxWidth: 240, className: 'ede-popup' });
         this.personalMarkers.push(marker);
         if (focus) this.map.flyTo([obs.lat, obs.lng], 16, { duration: 0.8 });
+    },
+
+    toggleCommunityLayer(on) {
+        const cb = document.getElementById('toggle-community-layer');
+        const cbQuick = document.getElementById('quick-toggle-community');
+        if (on) {
+            if (!this.map.hasLayer(this.communityLayer)) this.communityLayer.addTo(this.map);
+        } else {
+            if (this.map.hasLayer(this.communityLayer)) this.map.removeLayer(this.communityLayer);
+        }
+        if (cb) cb.checked = on;
+        if (cbQuick) cbQuick.checked = on;
+    },
+
+    togglePersonalLayer(on) {
+        const cb = document.getElementById('toggle-personal-layer');
+        const cbQuick = document.getElementById('quick-toggle-personal');
+        if (on) {
+            if (!this.map.hasLayer(this.personalLayer)) this.personalLayer.addTo(this.map);
+        } else {
+            if (this.map.hasLayer(this.personalLayer)) this.map.removeLayer(this.personalLayer);
+        }
+        if (cb) cb.checked = on;
+        if (cbQuick) cbQuick.checked = on;
     },
 
     recenter() {

@@ -47,6 +47,11 @@ export const ui = {
         if (sheet) sheet.style.visibility = isMap ? 'visible' : 'hidden';
         // Collapse the sheet whenever navigating away from map
         if (!isMap && this.app.hud && this.app.hud.peekHomeSheet) this.app.hud.peekHomeSheet();
+        // Close layer picker when navigating
+        const picker = document.getElementById('map-layer-picker');
+        if (picker) picker.classList.add('hidden');
+        const layerBtn = document.getElementById('map-layer-toggle');
+        if (layerBtn) layerBtn.classList.remove('ring-2', 'ring-brand');
         const mapControls = document.getElementById('map-controls');
         if (mapControls) { mapControls.style.opacity = isMap ? '1' : '0'; mapControls.style.pointerEvents = isMap ? 'auto' : 'none'; }
         if (this.app.haptics) this.app.haptics.vibrate();
@@ -225,13 +230,18 @@ export const ui = {
     },
 
     _speciesCard(s) {
-        const rarityClass = s.rarity === 'Common' ? 'bg-green-100 text-green-700' : s.rarity === 'Uncommon' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
-        return '<button onclick="app.ui.openSpeciesDetail(' + s.id + ')" class="flex flex-col bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 active:scale-98 transition-all text-left shadow-sm">' +
-            '<div class="aspect-square overflow-hidden"><img src="' + (s.squareImg || s.img || '') + '" class="w-full h-full object-cover" loading="lazy"></div>' +
-            '<div class="p-2.5">' +
-            '<div class="font-bold text-xs text-gray-900 dark:text-white truncate">' + s.name + '</div>' +
-            '<div class="text-[10px] text-gray-400 italic truncate">' + (s.sciName || '') + '</div>' +
-            '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-1 inline-block ' + rarityClass + '">' + s.rarity + '</span>' +
+        const rarityClass = s.rarity === 'Common' ? 'rarity-common' : s.rarity === 'Uncommon' ? 'rarity-uncommon' : 'rarity-rare';
+        const emoji = this.app.inat.iconicEmoji(s.iconic);
+        const imgSrc = s.squareImg || s.img || '';
+        const imgEl = imgSrc
+            ? '<img src="' + imgSrc + '" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\"w-full h-full flex items-center justify-center text-4xl bg-brand/5\\\">' + emoji + '</div>\'">'
+            : '<div class="w-full h-full flex items-center justify-center text-4xl bg-brand/5">' + emoji + '</div>';
+        return '<button onclick="app.ui.openSpeciesDetail(' + s.id + ')" class="species-discover-card">' +
+            '<div class="species-discover-img">' + imgEl + '</div>' +
+            '<div class="species-discover-body">' +
+            '<div class="font-bold text-xs text-gray-900 dark:text-white truncate leading-tight">' + s.name + '</div>' +
+            (s.sciName ? '<div class="text-[10px] text-gray-400 italic truncate">' + s.sciName + '</div>' : '') +
+            '<span class="species-rarity-pill ' + rarityClass + '">' + s.rarity + '</span>' +
             '</div></button>';
     },
 
@@ -250,6 +260,12 @@ export const ui = {
         const panel = document.getElementById('panel-species-detail');
         const content = document.getElementById('species-detail-content');
         if (!panel || !content) return;
+        // Hide home sheet so it doesn't peek through
+        const sheet = document.getElementById('home-sheet');
+        if (sheet) sheet.style.visibility = 'hidden';
+        // Close layer picker if open
+        const picker = document.getElementById('map-layer-picker');
+        if (picker) picker.classList.add('hidden');
         panel.style.transform = 'translateX(0)';
         panel.classList.add('panel-active');
         content.innerHTML = '<div class="flex items-center justify-center py-20 text-gray-400 gap-2"><span class="material-symbols-rounded animate-spin">progress_activity</span></div>';
@@ -262,17 +278,40 @@ export const ui = {
         const inCatalogue = !!cat;
         const wikiSummary = taxon.wikipedia_summary || '';
         const status = taxon.conservation_status?.status_name || '';
+
+        // Build photo list for lightbox: hero + taxon_photos
+        const allPhotos = [];
+        if (heroImg) allPhotos.push({ url: heroImg, thumb: taxon.default_photo?.square_url || heroImg });
+        if (taxon.taxon_photos) {
+            taxon.taxon_photos.forEach((tp, i) => {
+                const url = tp.photo.medium_url || tp.photo.url || '';
+                const thumb = tp.photo.square_url || tp.photo.url || '';
+                if (url && !(i === 0 && heroImg)) allPhotos.push({ url, thumb });
+            });
+        }
+        // Serialize photo list for inline onclick
+        const photosJson = JSON.stringify(allPhotos).replace(/"/g, '&quot;');
+
         let photosHtml = '';
-        if (taxon.taxon_photos && taxon.taxon_photos.length > 1) {
-            photosHtml = '<div><div class="text-xs font-black uppercase tracking-wider text-gray-400 mb-2">More Photos</div>' +
+        if (allPhotos.length > 1) {
+            photosHtml = '<div><div class="text-xs font-black uppercase tracking-wider text-gray-400 mb-2">Photos · ' + allPhotos.length + '</div>' +
                 '<div class="flex gap-2 overflow-x-auto hide-scrollbar">' +
-                taxon.taxon_photos.slice(0,6).map(tp => '<img src="' + (tp.photo.square_url || tp.photo.url || '') + '" class="w-20 h-20 rounded-xl object-cover shrink-0">').join('') +
+                allPhotos.map((p, i) =>
+                    '<button onclick="app.ui.openLightbox(' + photosJson + ',' + i + ')" class="lightbox-thumb shrink-0 rounded-xl overflow-hidden active:scale-95 transition-transform">' +
+                    '<img src="' + p.thumb + '" class="w-20 h-20 object-cover block" loading="lazy" onerror="this.closest(\'button\').style.display=\'none\'">' +
+                    '</button>'
+                ).join('') +
                 '</div></div>';
         }
         content.innerHTML =
             '<div class="relative">' +
-            (heroImg ? '<img src="' + heroImg + '" class="species-hero">' : '<div class="species-hero bg-brand/10 flex items-center justify-center text-8xl">' + this.app.inat.iconicEmoji(iconic) + '</div>') +
-            '<div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">' +
+            (heroImg
+                ? '<button onclick="app.ui.openLightbox(' + photosJson + ',0)" class="block w-full active:opacity-90 transition-opacity">' +
+                  '<img src="' + heroImg + '" class="species-hero">' +
+                  '<div class="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">' +
+                  '<span class="material-symbols-rounded text-xs">zoom_in</span>' + allPhotos.length + ' photo' + (allPhotos.length !== 1 ? 's' : '') + '</div></button>'
+                : '<div class="species-hero bg-brand/10 flex items-center justify-center text-8xl">' + this.app.inat.iconicEmoji(iconic) + '</div>') +
+            '<div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 pointer-events-none">' +
             '<h1 class="text-2xl font-black text-white">' + commonName + '</h1>' +
             '<p class="text-white/80 text-sm italic">' + taxon.name + '</p></div></div>' +
             '<div class="p-4 space-y-4">' +
@@ -291,6 +330,72 @@ export const ui = {
     closeSpeciesDetail() {
         const panel = document.getElementById('panel-species-detail');
         if (panel) { panel.style.transform = 'translateX(100%)'; panel.classList.remove('panel-active'); }
+        // Restore home sheet only if map tab is active
+        const mapActive = document.getElementById('nav-map')?.classList.contains('active');
+        const sheet = document.getElementById('home-sheet');
+        if (sheet && mapActive) sheet.style.visibility = 'visible';
+    },
+
+    // ── Photo Lightbox ──────────────────────────────────────────────
+    _lightboxPhotos: [],
+    _lightboxIdx: 0,
+
+    openLightbox(photos, startIdx = 0) {
+        this._lightboxPhotos = photos;
+        this._lightboxIdx = startIdx;
+        this._renderLightbox();
+        const lb = document.getElementById('photoLightbox');
+        if (!lb) return;
+        lb.classList.remove('pointer-events-none', 'opacity-0');
+        lb.classList.add('opacity-100', 'pointer-events-auto');
+        // Swipe support
+        lb._lbStartX = null;
+        lb._lbOnStart = (e) => { lb._lbStartX = (e.touches ? e.touches[0] : e).clientX; };
+        lb._lbOnEnd = (e) => {
+            if (lb._lbStartX === null) return;
+            const dx = (e.changedTouches ? e.changedTouches[0] : e).clientX - lb._lbStartX;
+            lb._lbStartX = null;
+            if (Math.abs(dx) > 40) this.lightboxNav(dx < 0 ? 1 : -1);
+        };
+        lb.addEventListener('touchstart', lb._lbOnStart, { passive: true });
+        lb.addEventListener('touchend', lb._lbOnEnd, { passive: true });
+        // Tap background to close
+        lb._lbBgClose = (e) => {
+            if (e.target === lb) this.closeLightbox();
+        };
+        lb.addEventListener('click', lb._lbBgClose);
+    },
+
+    closeLightbox() {
+        const lb = document.getElementById('photoLightbox');
+        if (!lb) return;
+        lb.classList.add('opacity-0');
+        setTimeout(() => lb.classList.add('pointer-events-none'), 300);
+        lb.classList.remove('opacity-100', 'pointer-events-auto');
+        if (lb._lbOnStart) lb.removeEventListener('touchstart', lb._lbOnStart);
+        if (lb._lbOnEnd)   lb.removeEventListener('touchend',   lb._lbOnEnd);
+        if (lb._lbBgClose) lb.removeEventListener('click',      lb._lbBgClose);
+    },
+
+    lightboxNav(dir) {
+        const len = this._lightboxPhotos.length;
+        if (len < 2) return;
+        this._lightboxIdx = (this._lightboxIdx + dir + len) % len;
+        this._renderLightbox();
+    },
+
+    _renderLightbox() {
+        const photos = this._lightboxPhotos;
+        const idx = this._lightboxIdx;
+        const p = photos[idx];
+        const img = document.getElementById('lightbox-img');
+        const counter = document.getElementById('lightbox-counter');
+        const prev = document.getElementById('lightbox-prev');
+        const next = document.getElementById('lightbox-next');
+        if (img) { img.src = p.url; img.alt = p.caption || ''; }
+        if (counter) counter.textContent = photos.length > 1 ? (idx + 1) + ' / ' + photos.length : '';
+        if (prev) prev.classList.toggle('opacity-0', photos.length < 2);
+        if (next) next.classList.toggle('opacity-0', photos.length < 2);
     },
 
     openObsDetail(obsId) {
@@ -505,18 +610,35 @@ export const ui = {
         if (this.app.journal && this.app.journal._renderTimeline) this.app.journal._renderTimeline();
     },
 
-    toggleMapLayers() {
-        if (!this.app.map) return;
-        const m = this.app.map;
+    toggleLayerPicker() {
+        const picker = document.getElementById('map-layer-picker');
         const btn = document.getElementById('map-layer-toggle');
-        if (m.map.hasLayer(m.communityLayer)) {
-            m.map.removeLayer(m.communityLayer);
-            if (btn) btn.title = 'Show community observations';
+        if (!picker) return;
+        const isOpen = !picker.classList.contains('hidden');
+        if (isOpen) {
+            picker.classList.add('hidden');
+            if (btn) btn.classList.remove('ring-2', 'ring-brand');
         } else {
-            m.communityLayer.addTo(m.map);
-            if (btn) btn.title = 'Hide community observations';
+            picker.classList.remove('hidden');
+            if (btn) btn.classList.add('ring-2', 'ring-brand');
+            // Close when tapping elsewhere
+            setTimeout(() => {
+                const close = (e) => {
+                    if (!picker.contains(e.target) && e.target !== btn) {
+                        picker.classList.add('hidden');
+                        if (btn) btn.classList.remove('ring-2', 'ring-brand');
+                    }
+                    document.removeEventListener('touchstart', close);
+                    document.removeEventListener('click', close);
+                };
+                document.addEventListener('touchstart', close, { once: true });
+                document.addEventListener('click', close, { once: true });
+            }, 50);
         }
     },
+
+    // Keep for backwards compatibility / settings panel
+    toggleMapLayers() { this.toggleLayerPicker(); },
 
     confirmClearData() {
         if (confirm('Are you sure? All observations, species, and progress will be permanently deleted.')) {

@@ -106,17 +106,17 @@ describe('ui._speciesCard()', () => {
 
     test('Common rarity uses green color class', () => {
         const html = ui._speciesCard({ id: 1, name: 'X', sciName: '', rarity: 'Common', img: '', squareImg: '' });
-        assert.ok(html.includes('bg-green-100'));
+        assert.ok(html.includes('rarity-common'));
     });
 
     test('Uncommon rarity uses amber color class', () => {
         const html = ui._speciesCard({ id: 1, name: 'X', sciName: '', rarity: 'Uncommon', img: '', squareImg: '' });
-        assert.ok(html.includes('bg-amber-100'));
+        assert.ok(html.includes('rarity-uncommon'));
     });
 
     test('Rare rarity uses red color class', () => {
         const html = ui._speciesCard({ id: 1, name: 'X', sciName: '', rarity: 'Rare', img: '', squareImg: '' });
-        assert.ok(html.includes('bg-red-100'));
+        assert.ok(html.includes('rarity-rare'));
     });
 });
 

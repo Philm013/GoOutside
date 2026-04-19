@@ -294,11 +294,12 @@ body { background: var(--paper); overflow: hidden; }
 .hs-species-row::-webkit-scrollbar { display: none; }
 .hs-species-card {
     display: flex; flex-direction: column; align-items: center;
-    gap: 4px; flex-shrink: 0; width: 88px;
+    gap: 5px; flex-shrink: 0; width: 100px;
     background: #f9fafb;
     border-radius: 16px;
-    padding: 8px 6px;
+    padding: 0 0 8px;
     border: 1.5px solid #e5e7eb;
+    overflow: hidden;
     transition: transform 0.15s;
     cursor: pointer;
 }
@@ -306,8 +307,25 @@ body { background: var(--paper); overflow: hidden; }
     .hs-species-card { background: #1f2a19; border-color: #374151; }
 }
 .hs-species-card:active { transform: scale(0.95); }
-.hs-species-img { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; }
-.hs-species-name { font-size: 11px; font-weight: 700; text-align: center; line-height: 1.2; color: #1f2937; }
+.hs-species-img-wrap {
+    width: 100%; height: 76px;
+    position: relative; overflow: hidden;
+}
+.hs-species-img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+}
+.hs-species-emoji {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; background: var(--brand-xlt);
+}
+.hs-species-name {
+    font-size: 11px; font-weight: 700; text-align: center;
+    line-height: 1.2; color: #1f2937;
+    padding: 0 6px;
+    width: 100%;
+}
 @media (prefers-color-scheme: dark) { .hs-species-name { color: #e5e7eb; } }
 .hs-species-rarity {
     font-size: 9px; font-weight: 800; text-transform: uppercase;
@@ -316,6 +334,133 @@ body { background: var(--paper); overflow: hidden; }
 .rarity-common  { background:#dcfce7; color:#166534; }
 .rarity-uncommon{ background:#fef3c7; color:#92400e; }
 .rarity-rare    { background:#fee2e2; color:#991b1b; }
+
+/* ── Home Sheet: Recent Badge Banner ────────────────────────── */
+.hs-recent-badge {
+    display: flex; align-items: center; gap: 10px;
+    margin: 4px 16px 2px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-radius: 14px;
+    border: 1.5px solid #fcd34d;
+}
+@media (prefers-color-scheme: dark) {
+    .hs-recent-badge { background: linear-gradient(135deg, #78350f, #92400e); border-color: #b45309; }
+}
+.hs-recent-badge-icon { font-size: 22px; flex-shrink: 0; }
+.hs-recent-badge-text { flex: 1; font-size: 12px; color: #78350f; line-height: 1.3; }
+@media (prefers-color-scheme: dark) { .hs-recent-badge-text { color: #fde68a; } }
+.hs-recent-badge-btn {
+    font-size: 11px; font-weight: 700; color: #92400e;
+    padding: 4px 10px; border-radius: 99px;
+    background: rgba(0,0,0,0.08); flex-shrink: 0;
+}
+@media (prefers-color-scheme: dark) { .hs-recent-badge-btn { color: #fde68a; background: rgba(255,255,255,0.1); } }
+
+/* ── Home Sheet: Achievement Progress Card ───────────────────── */
+.hs-achievement-card {
+    display: flex; align-items: center; gap: 12px;
+    margin: 0 16px 4px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1.5px solid #e5e7eb;
+    border-radius: 16px;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.12s;
+}
+@media (prefers-color-scheme: dark) {
+    .hs-achievement-card { background: #1f2a19; border-color: #374151; }
+}
+.hs-achievement-card:active { transform: scale(0.98); }
+.hs-achievement-icon { font-size: 28px; flex-shrink: 0; }
+.hs-achievement-body { flex: 1; min-width: 0; }
+.hs-achievement-name { font-size: 13px; font-weight: 800; color: #1f2937; line-height: 1.2; }
+@media (prefers-color-scheme: dark) { .hs-achievement-name { color: #e5e7eb; } }
+.hs-achievement-desc { font-size: 11px; color: #6b7280; margin-top: 1px; }
+.hs-achievement-bar-wrap {
+    margin-top: 6px; height: 5px;
+    background: #e5e7eb; border-radius: 99px; overflow: hidden;
+}
+@media (prefers-color-scheme: dark) { .hs-achievement-bar-wrap { background: #374151; } }
+.hs-achievement-bar {
+    height: 100%; background: var(--brand);
+    border-radius: 99px; transition: width 0.5s ease;
+    min-width: 4px;
+}
+.hs-achievement-pct { font-size: 10px; color: #9ca3af; margin-top: 3px; }
+
+/* ── Home Sheet: Nearby Sightings Cards ──────────────────────── */
+.hs-nearby-card {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; flex-shrink: 0; width: 88px;
+    background: #f0f9ff;
+    border-radius: 14px;
+    padding: 0 0 7px;
+    border: 1.5px solid #bae6fd;
+    overflow: hidden;
+    transition: transform 0.15s;
+    cursor: pointer;
+}
+@media (prefers-color-scheme: dark) {
+    .hs-nearby-card { background: #0c1a2e; border-color: #1e3a5f; }
+}
+.hs-nearby-card:active { transform: scale(0.95); }
+.hs-nearby-img-wrap { width: 100%; height: 62px; position: relative; overflow: hidden; }
+.hs-nearby-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hs-nearby-emoji {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; background: #e0f2fe;
+}
+@media (prefers-color-scheme: dark) { .hs-nearby-emoji { background: #0c2744; } }
+.hs-nearby-name {
+    font-size: 10px; font-weight: 700; text-align: center;
+    line-height: 1.2; color: #0c4a6e;
+    padding: 0 5px; width: 100%;
+}
+@media (prefers-color-scheme: dark) { .hs-nearby-name { color: #7dd3fc; } }
+.hs-nearby-when { font-size: 9px; color: #94a3b8; text-align: center; }
+
+/* ── Photo Lightbox ───────────────────────────────────────────── */
+.lightbox-thumb {
+    border-radius: 10px; overflow: hidden;
+    outline: 2px solid transparent; outline-offset: 2px;
+    transition: outline-color 0.15s, transform 0.12s;
+}
+.lightbox-thumb:active { transform: scale(0.94); }
+
+/* Discover Panel Species Cards */
+.species-discover-card {
+    display: flex; flex-direction: column;
+    background: var(--surface);
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1.5px solid #e5e7eb;
+    transition: transform 0.12s;
+    cursor: pointer;
+    text-align: left;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+@media (prefers-color-scheme: dark) {
+    .species-discover-card { background: #1f2a19; border-color: #374151; box-shadow: none; }
+}
+.species-discover-card:active { transform: scale(0.97); }
+.species-discover-img {
+    width: 100%; aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--brand-xlt);
+}
+.species-discover-body {
+    padding: 8px 10px 10px;
+    display: flex; flex-direction: column; gap: 3px;
+}
+.species-rarity-pill {
+    font-size: 9px; font-weight: 800; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 99px;
+    display: inline-block; margin-top: 2px;
+}
+
 .hs-discover-btn {
     display: flex; align-items: center; justify-content: center; gap: 6px;
     margin: 0 16px 8px;
@@ -560,3 +705,53 @@ body { background: var(--paper); overflow: hidden; }
 .text-brand { color: var(--brand); }
 .bg-brand   { background: var(--brand); }
 .border-brand { border-color: var(--brand); }
+
+/* ── Map Popups ───────────────────────────────────────────────── */
+.leaflet-popup-content-wrapper.ede-popup,
+.ede-popup .leaflet-popup-content-wrapper {
+    border-radius: 16px !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+.leaflet-popup-tip-container { display: none; }
+.ede-popup .leaflet-popup-content { margin: 0 !important; }
+.com-popup {
+    display: flex; align-items: stretch;
+    min-width: 180px; max-width: 240px;
+    font-family: inherit;
+}
+.com-popup-img {
+    width: 72px; height: 100%;
+    min-height: 80px;
+    object-fit: cover; flex-shrink: 0;
+}
+.com-popup-emoji {
+    width: 72px; min-height: 80px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    background: var(--brand-xlt); flex-shrink: 0;
+}
+.com-popup-body {
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 2px;
+    flex: 1;
+}
+.com-popup-name {
+    font-size: 13px; font-weight: 800; color: #1f2937;
+    line-height: 1.2;
+}
+.com-popup-meta { font-size: 11px; color: #6b7280; }
+.com-popup-by { font-size: 10px; color: #9ca3af; }
+.com-popup-btn {
+    margin-top: 6px;
+    padding: 5px 10px;
+    background: var(--brand);
+    color: white;
+    border-radius: 8px;
+    font-size: 11px; font-weight: 700;
+    display: inline-block;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.com-popup-btn:active { opacity: 0.8; }
