@@ -30,7 +30,12 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
 .safe-b  { padding-bottom: env(safe-area-inset-bottom); }
 .pb-nav  { padding-bottom: var(--nav-h); }
 
-/* ── Permanent top status bar ────────────────────────────────── */
+/* ── Map controls: default bottom before JS init ────────────── */
+#map-controls {
+    bottom: calc(var(--nav-h) + 84px);
+    transition: bottom 0.38s cubic-bezier(0.34,1.38,0.64,1);
+}
+
 #top-bar {
     position: fixed; top: 0; left: 0; right: 0;
     z-index: 35;
@@ -390,7 +395,6 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
     overflow-y: hidden;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: var(--nav-h);
 }
 .hs-today-row {
     display: flex;

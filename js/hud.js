@@ -101,6 +101,17 @@ export const hud = {
             content.style.overflowY = state === 'full' ? 'auto' : 'hidden';
         };
 
+        // ── Helper: position map controls above the sheet's current top ─
+        const positionMapControls = (sheetTop, animated, dur, ease) => {
+            const ctrl = document.getElementById('map-controls');
+            if (!ctrl) return;
+            // Controls sit 12px above the sheet top edge
+            const btm = Math.round(window.innerHeight - sheetTop + 12);
+            if (animated) ctrl.style.transition = `bottom ${dur} ${ease}`;
+            else ctrl.style.transition = 'none';
+            ctrl.style.bottom = btm + 'px';
+        };
+
         // ── Snap animation ──────────────────────────────────────────────
         this._snapTo = (state, fast = false) => {
             this._snapState = state;
@@ -109,15 +120,14 @@ export const hud = {
             const ease = fast
                 ? 'cubic-bezier(0.22,1,0.36,1)'
                 : 'cubic-bezier(0.34,1.38,0.64,1)';
+            const snapTop = SNAPS[state]();
             sheet.style.transition = `top ${dur} ${ease}`;
-            sheet.style.top = SNAPS[state]() + 'px';
+            sheet.style.top = snapTop + 'px';
             applyClass(state);
             updateScroll(state);
             const bar = document.getElementById("home-sheet-handle-bar");
             if (bar) bar.style.width = state === 'dock' ? '44px' : state === 'peek' ? '40px' : state === 'mid' ? '36px' : '28px';
-            // Keep map controls above dock bar (88px clearance)
-            const ctrl = document.getElementById('map-controls');
-            if (ctrl) ctrl.style.bottom = `calc(var(--nav-h) + 88px)`;
+            positionMapControls(snapTop, true, dur, ease);
         };
 
         // ── Velocity tracking ────────────────────────────────────────────
@@ -172,6 +182,7 @@ export const hud = {
             trackPoint(y);
             const clamped = Math.max(SNAPS.full(), Math.min(SNAPS.dock(), startTop + (y - startY)));
             sheet.style.top = clamped + 'px';
+            positionMapControls(clamped, false);
         };
         const end = () => {
             pendingStart = null;
@@ -231,7 +242,9 @@ export const hud = {
         // ── Reposition on viewport change ───────────────────────────────
         const reposition = () => {
             sheet.style.transition = 'none';
-            sheet.style.top = SNAPS[this._snapState]() + 'px';
+            const top = SNAPS[this._snapState]();
+            sheet.style.top = top + 'px';
+            positionMapControls(top, false);
         };
         window.addEventListener('resize', reposition);
         document.addEventListener('fullscreenchange', reposition);
@@ -239,8 +252,10 @@ export const hud = {
         // ── Initial state: dock ──────────────────────────────────────────
         this._snapState = 'dock';
         sheet.classList.add('is-dock');
-        sheet.style.top = SNAPS.dock() + 'px';
+        const initTop = SNAPS.dock();
+        sheet.style.top = initTop + 'px';
         updateScroll('dock');
+        positionMapControls(initTop, false);
     },
 
     async refreshHomeSheet() {
@@ -351,7 +366,8 @@ export const hud = {
             achievementHtml +
             '<button onclick="app.hud.peekHomeSheet(); app.ui.openPanel(\'panel-discover\')" class="hs-discover-btn">' +
                 '<span class="material-symbols-rounded">explore</span> Explore Nearby' +
-            '</button>';
+            '</button>' +
+            '<div style="height:calc(var(--nav-h) + 20px)"></div>';
         this.refreshDockBar();
     },
 
