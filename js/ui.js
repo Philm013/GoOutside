@@ -10,17 +10,11 @@ export const ui = {
     },
 
     _loadSettings() {
-        const s = this.app.state.settings || {};
-        const urlEl = document.getElementById('settings-birdnet-url');
-        const tokenEl = document.getElementById('settings-birdnet-token');
-        if (urlEl) urlEl.value = s.birdnetApiUrl || '';
-        if (tokenEl) tokenEl.value = s.birdnetToken || '';
+        // settings loaded from state, no UI fields needed currently
     },
 
     saveSettings() {
-        const url = document.getElementById('settings-birdnet-url')?.value.trim() || '';
-        const token = document.getElementById('settings-birdnet-token')?.value.trim() || '';
-        this.app.state.settings = { birdnetApiUrl: url, birdnetToken: token };
+        this.app.state.settings = this.app.state.settings || {};
         this.app.saveState();
         this.showToast('Settings saved!');
     },
@@ -590,6 +584,10 @@ export const ui = {
         modal.classList.remove('pointer-events-none', 'opacity-0', 'hidden');
         modal.classList.add('opacity-100');
         if (inner) inner.classList.remove('translate-y-full');
+        // Pre-warm the BirdNET worker so the model starts loading immediately
+        if (this.app.identify && !this.app.identify._birdnetWorker) {
+            this.app.identify._initBirdNetWorker();
+        }
     },
 
     closeAudioId() {
@@ -601,7 +599,13 @@ export const ui = {
         if (inner) inner.classList.add('translate-y-full');
         setTimeout(() => modal.classList.add('pointer-events-none', 'hidden'), 320);
         const content = document.getElementById('audio-id-content');
-        if (content) content.innerHTML = '<div class="flex flex-col items-center gap-5 py-6"><div class="text-6xl">🐦</div><h3 class="text-xl font-black text-center">Ready to Listen</h3><p class="text-sm text-gray-500 text-center max-w-xs">Point your phone toward birds you hear. We\'ll record and analyse the audio.</p><button onclick="app.identify.startAudioId()" class="bg-brand text-white px-10 py-4 rounded-2xl font-black text-lg shadow-lg shadow-brand/30 active:scale-95 transition-transform"><span class="material-symbols-rounded align-middle mr-1">mic</span> Start Listening</button></div>';
+        if (content && this.app.identify) {
+            if (this.app.identify._birdnetReady) {
+                this.app.identify._renderReadyToListen(content);
+            } else {
+                content.innerHTML = '<div class="flex flex-col items-center gap-5 py-6"><div class="text-6xl">🐦</div><h3 class="text-xl font-black text-center">Listen for Birds</h3><p class="text-sm text-gray-500 text-center max-w-xs">BirdNET identifies birds from audio entirely on your device — no internet required for analysis.</p><button onclick="app.identify.startAudioId()" class="bg-brand text-white px-10 py-4 rounded-2xl font-black text-lg shadow-lg shadow-brand/30 active:scale-95 transition-transform"><span class="material-symbols-rounded align-middle mr-1">mic</span> Start Listening</button></div>';
+            }
+        }
     },
 
     setJournalFilter(btn) {

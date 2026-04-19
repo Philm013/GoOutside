@@ -16,7 +16,7 @@ describe('data.defaultState()', () => {
         assert.deepEqual(s.observations, []);
         assert.deepEqual(s.catalogue, {});
         assert.deepEqual(s.badges, []);
-        assert.deepEqual(s.settings, { birdnetApiUrl: '', birdnetToken: '' });
+        assert.deepEqual(s.settings, {});
     });
 
     test('username has randomness (two calls differ with high probability)', () => {

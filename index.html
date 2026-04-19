@@ -49,18 +49,30 @@
 
 <!-- ══ LOADING SCREEN ═════════════════════════════════════════ -->
 <div id="loading-screen">
+    <div id="loading-orbs" aria-hidden="true">
+        <span class="orb orb-1">🌿</span>
+        <span class="orb orb-2">🦋</span>
+        <span class="orb orb-3">🌸</span>
+        <span class="orb orb-4">🦜</span>
+        <span class="orb orb-5">🍄</span>
+        <span class="orb orb-6">🌱</span>
+        <span class="orb orb-7">🦊</span>
+        <span class="orb orb-8">🐸</span>
+    </div>
     <div id="loading-inner">
-        <div id="loading-orbs" aria-hidden="true">
-            <span class="orb orb-1">🌍</span>
-            <span class="orb orb-2">🌿</span>
-            <span class="orb orb-3">🦋</span>
-            <span class="orb orb-4">🌸</span>
-            <span class="orb orb-5">🦜</span>
-            <span class="orb orb-6">🍄</span>
-            <span class="orb orb-7">🌱</span>
-            <span class="orb orb-8">🦊</span>
+        <div id="loading-orbit-wrap" aria-hidden="true">
+            <div id="loading-logo">🌍</div>
+            <div class="orbit-ring" id="orbit-ring">
+                <span class="orbit-item" style="--i:0">🌿</span>
+                <span class="orbit-item" style="--i:1">🦋</span>
+                <span class="orbit-item" style="--i:2">🌸</span>
+                <span class="orbit-item" style="--i:3">🦜</span>
+                <span class="orbit-item" style="--i:4">🍄</span>
+                <span class="orbit-item" style="--i:5">🌱</span>
+                <span class="orbit-item" style="--i:6">🦊</span>
+                <span class="orbit-item" style="--i:7">🐸</span>
+            </div>
         </div>
-        <div id="loading-logo">🌍</div>
         <h1 id="loading-title">Earth Day<br>Everyday</h1>
         <p id="loading-tagline">Every day is a chance to discover nature.</p>
         <div id="loading-progress-wrap">
@@ -68,6 +80,9 @@
         </div>
         <p id="loading-status">Starting up…</p>
         <p id="loading-flavor"></p>
+        <button id="loading-launch-btn" class="hidden" onclick="app._launchFromSplash()">
+            <span class="material-symbols-rounded">eco</span> Start Exploring
+        </button>
     </div>
 </div>
 
@@ -195,7 +210,7 @@
                     class="id-tool-card">
                     <div class="id-tool-icon">🎤</div>
                     <div class="id-tool-title">Listen for Birds</div>
-                    <div class="id-tool-desc">BirdNET-powered real-time bird identification from audio</div>
+                    <div class="id-tool-desc">Identify birds by sound using BirdNET AI — runs entirely on your device</div>
                 </button>
                 <button onclick="app.ui.openKGModal()"
                     class="id-tool-card">
@@ -211,9 +226,8 @@
                 </button>
             </div>
             <div class="mt-6 p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/20">
-                <div class="text-sm font-bold text-brand mb-1">🔗 BirdNET Integration</div>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Connect a BirdNET Analyzer API endpoint in Settings for real-time audio bird identification.</p>
-                <button onclick="app.ui.openPanel('panel-settings')" class="mt-2 text-xs font-bold text-brand underline">Configure in Settings →</button>
+                <div class="text-sm font-bold text-brand mb-1">🔒 Fully On-Device</div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">BirdNET audio analysis runs entirely in your browser using TensorFlow.js. No audio ever leaves your device. First use downloads the AI model (~50 MB); subsequent uses load instantly from cache.</p>
             </div>
         </div>
     </div>
@@ -318,15 +332,6 @@
             <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
         </header>
         <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-nav">
-            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
-                <h3 class="font-bold text-sm mb-3">🎤 BirdNET Audio ID</h3>
-                <p class="text-xs text-gray-500 mb-3">Enter your BirdNET Analyzer API endpoint to enable real audio bird identification.</p>
-                <label class="block text-xs font-semibold text-gray-500 mb-1">API Endpoint URL</label>
-                <input id="settings-birdnet-url" type="url" class="settings-input mb-3" placeholder="https://your-birdnet-api.example.com/analyze">
-                <label class="block text-xs font-semibold text-gray-500 mb-1">Bearer Token (optional)</label>
-                <input id="settings-birdnet-token" type="password" class="settings-input mb-3" placeholder="Token...">
-                <button onclick="app.ui.saveSettings()" class="w-full bg-brand text-white py-2.5 rounded-xl font-bold text-sm active:scale-95">Save Settings</button>
-            </div>
             <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
                 <h3 class="font-bold text-sm mb-3">🗺 Map Layers</h3>
                 <label class="flex items-center justify-between py-2 cursor-pointer">
@@ -572,6 +577,6 @@
      style="bottom: calc(var(--nav-h) + 8px)"></div>
 
 <!-- APP LOGIC -->
-<script type="module" src="js/app.js?v=20260418f"></script>
+<script type="module" src="js/app.js?v=20260419b"></script>
 </body>
 </html>

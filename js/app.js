@@ -1,11 +1,11 @@
-import { haptics } from './haptics.js?v=20260418f';
-import { hud } from './hud.js?v=20260418f';
-import { ui } from './ui.js?v=20260418f';
-import { data } from './data.js?v=20260418f';
-import { map } from './map.js?v=20260418f';
-import { inat } from './inat.js?v=20260418f';
-import { identify } from './identify.js?v=20260418f';
-import { journal } from './journal.js?v=20260418f';
+import { haptics } from './haptics.js?v=20260419b';
+import { hud } from './hud.js?v=20260419b';
+import { ui } from './ui.js?v=20260419b';
+import { data } from './data.js?v=20260419b';
+import { map } from './map.js?v=20260419b';
+import { inat } from './inat.js?v=20260419b';
+import { identify } from './identify.js?v=20260419b';
+import { journal } from './journal.js?v=20260419b';
 
 const app = {
     state: {},
@@ -14,7 +14,6 @@ const app = {
 
     async init() {
         const startedAt = Date.now();
-        const MIN_SPLASH_MS = 3200; // always show splash for at least this long
 
         // ── Progress bar helpers ────────────────────────────────────
         const progressBar = document.getElementById('loading-progress-bar');
@@ -90,13 +89,19 @@ const app = {
             this._preloadedObs.forEach(o => this.map._addCommunityPin(o));
         }
 
-        setProgress(100, 'Welcome to Earth Day Everyday 🌍');
+        setProgress(100, 'Ready to explore! 🌍');
 
-        // ── 8. Dismiss — wait for minimum splash time ───────────────
-        const elapsed = Date.now() - startedAt;
-        const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
-        await new Promise(r => setTimeout(r, wait));
+        // ── 8. Show launch button — user taps to enter ──────────────
+        const btn = document.getElementById('loading-launch-btn');
+        if (btn) {
+            btn.classList.remove('hidden');
+            // Small delay so progress bar finishing is visible first
+            setTimeout(() => btn.classList.add('launch-ready'), 80);
+        }
+        // _launchFromSplash() is called by the button onclick
+    },
 
+    _launchFromSplash() {
         const ls = document.getElementById('loading-screen');
         if (ls) {
             ls.classList.add('loading-out');
@@ -133,16 +138,42 @@ window.onload = () => {
         '"What is the use of a house if you haven\'t got a tolerable planet to put it on?" — Thoreau',
         '"One touch of nature makes the whole world kin." — Shakespeare',
         '"Study nature, love nature, stay close to nature. It will never fail you." — F.L. Wright',
+        '"The clearest way into the Universe is through a forest wilderness." — John Muir',
+        '"Those who contemplate the beauty of the earth find reserves of strength." — Rachel Carson',
+        '"In wildness is the preservation of the world." — Henry David Thoreau',
+        '"Nature is not a place to visit. It is home." — Gary Snyder',
+        '"I go to nature to be soothed and healed, and to have my senses put in order." — John Burroughs',
+        '"To walk in nature is to witness a thousand miracles." — Mary Davis',
+        '"The poetry of the earth is never dead." — John Keats',
+        '"If you truly love nature, you will find beauty everywhere." — Vincent van Gogh',
+        '"Forget not that the earth delights to feel your bare feet." — Kahlil Gibran',
+        '"Look deep into nature, and you will understand everything better." — Einstein',
+        '"Birds are indicators of the environment." — Roger Tory Peterson',
+        '"The butterfly counts not months but moments, and has time enough." — Tagore',
+        '"Knowing trees, I understand the meaning of patience." — Hal Borland',
+        '"A weed is no more than a flower in disguise." — James Russell Lowell',
+        '"Come forth into the light of things, let Nature be your teacher." — William Wordsworth',
+        '"The world is mud-luscious and puddle-wonderful." — e.e. cummings',
+        '"Keep close to Nature\'s heart. Break clear away once in a while." — John Muir',
+        '"Wilderness is not a luxury but a necessity of the human spirit." — Edward Abbey',
+        '"We don\'t inherit the earth from our ancestors — we borrow it from our children."',
+        '"An early-morning walk is a blessing for the whole day." — Thoreau',
+        '"The butterfly does not look back upon its caterpillar self." — Anonymous',
+        '"Every flower is a soul blossoming in nature." — Gérard de Nerval',
     ];
+
+    // Fisher-Yates shuffle for true randomness each session
+    const shuffled = [...flavors].sort(() => Math.random() - 0.5);
+    let i = 0;
+
     const flavorEl = document.getElementById('loading-flavor');
     if (flavorEl) {
-        let i = 0;
-        flavorEl.textContent = flavors[0];
+        flavorEl.textContent = shuffled[0];
         const iv = setInterval(() => {
-            i = (i + 1) % flavors.length;
+            i = (i + 1) % shuffled.length;
             flavorEl.style.opacity = '0';
-            setTimeout(() => { flavorEl.textContent = flavors[i]; flavorEl.style.opacity = '1'; }, 300);
-        }, 3200);
+            setTimeout(() => { flavorEl.textContent = shuffled[i]; flavorEl.style.opacity = '1'; }, 300);
+        }, 3600);
         const obs = new MutationObserver(() => {
             if (!document.getElementById('loading-screen')) { clearInterval(iv); obs.disconnect(); }
         });

@@ -1,14 +1,23 @@
-// Identification module: Knowledge Graph wizard + BirdNET-style Audio ID
+// Identification module: Knowledge Graph wizard + BirdNET in-browser Audio ID
 export const identify = {
     app: null,
-    // Audio ID state
+    // Audio pipeline
     audioCtx: null,
     analyser: null,
     mediaStream: null,
-    mediaRecorder: null,
-    audioChunks: [],
     animFrame: null,
     isListening: false,
+    _audioWorkletNode: null,
+    _audioSamples: null,
+    _lastPredictMs: 0,
+    _countdownTimer: null,
+    _listenStartTime: 0,
+    _liveDetections: [],
+    // BirdNET worker (kept alive across sessions to avoid reloading 50MB model)
+    _birdnetWorker: null,
+    _birdnetReady: false,
+    _birdnetLoading: false,
+    _pendingMicStart: false,
 
     // Knowledge Graph state
     kgCategory: null,
@@ -502,6 +511,71 @@ export const identify = {
     },
 
     // ─── AUDIO ID ─────────────────────────────────────────────────
+
+    /** Lazily initialise the BirdNET web worker. Safe to call multiple times. */
+    _initBirdNetWorker() {
+        if (this._birdnetWorker) return;
+        this._birdnetReady = false;
+        this._birdnetLoading = true;
+        try {
+            this._birdnetWorker = new Worker('js/birdnet-worker.js');
+            this._birdnetWorker.onmessage = (e) => this._onWorkerMessage(e);
+            this._birdnetWorker.onerror = (e) => {
+                console.error('BirdNET worker error:', e);
+                this._birdnetLoading = false;
+                this._updateLoadingUI(0, 'error');
+            };
+        } catch (e) {
+            console.error('Failed to create BirdNET worker:', e);
+            this._birdnetLoading = false;
+        }
+    },
+
+    _onWorkerMessage(e) {
+        const d = e.data;
+        switch (d.message) {
+            case 'load_model':
+            case 'warmup':
+            case 'load_geomodel':
+            case 'load_labels':
+                this._updateLoadingUI(d.progress, d.message);
+                break;
+            case 'loaded':
+                this._birdnetReady = true;
+                this._birdnetLoading = false;
+                this._updateLoadingUI(100, 'ready');
+                if (this._pendingMicStart) {
+                    this._pendingMicStart = false;
+                    this._startMicStream();
+                }
+                break;
+            case 'pooled':
+                if (this.isListening) this._onPooledResults(d.pooled);
+                break;
+        }
+    },
+
+    _updateLoadingUI(progress, stage) {
+        const bar = document.getElementById('birdnet-load-bar');
+        const label = document.getElementById('birdnet-load-label');
+        if (bar) bar.style.width = `${progress}%`;
+        if (label) {
+            const msgs = {
+                load_model: 'Downloading AI model (~50 MB)…',
+                warmup: 'Warming up model…',
+                load_geomodel: 'Loading regional species data…',
+                load_labels: 'Loading species names…',
+                ready: '✅ Ready!',
+                error: '❌ Failed to load model'
+            };
+            label.textContent = msgs[stage] || 'Initializing…';
+        }
+        if (stage === 'ready') {
+            const content = document.getElementById('audio-id-content');
+            if (content) this._renderReadyToListen(content);
+        }
+    },
+
     async startAudioId() {
         this.app.state._usedAudioId = true;
         this.app.saveState();
@@ -509,32 +583,107 @@ export const identify = {
         const container = document.getElementById('audio-id-content');
         if (!container) return;
 
-        // Reset state
         this.stopAudio();
-        this.audioChunks = [];
+        this._audioSamples = null;
+        this._lastPredictMs = 0;
+        this._liveDetections = [];
+
+        if (!this._birdnetWorker) this._initBirdNetWorker();
+
+        if (!this._birdnetReady) {
+            this._pendingMicStart = true;
+            this._showModelLoadingUI(container);
+            return;
+        }
+
+        await this._startMicStream();
+    },
+
+    _showModelLoadingUI(container) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center py-8 px-4 gap-4">
+                <div class="text-5xl animate-pulse">🧠</div>
+                <h3 class="font-bold text-gray-900 dark:text-white text-center">Loading BirdNET Model</h3>
+                <p class="text-xs text-gray-400 text-center max-w-xs">First use downloads the AI model (~50 MB). It runs entirely on your device — no audio ever leaves your phone.</p>
+                <div class="w-full max-w-xs">
+                    <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div id="birdnet-load-bar" class="h-full bg-brand rounded-full transition-all duration-500" style="width:0%"></div>
+                    </div>
+                    <p id="birdnet-load-label" class="text-xs text-center text-gray-400 mt-2">Initializing…</p>
+                </div>
+                <p class="text-[11px] text-gray-300 dark:text-gray-600 text-center">Subsequent uses load instantly from cache.</p>
+            </div>`;
+    },
+
+    _renderReadyToListen(container) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center gap-5 py-6">
+                <div class="text-6xl">🐦</div>
+                <h3 class="text-xl font-black text-center">Ready to Listen</h3>
+                <p class="text-sm text-gray-500 text-center max-w-xs">Point your phone toward birds you hear. BirdNET analyses audio in real-time, on your device.</p>
+                <button onclick="app.identify.startAudioId()"
+                    class="bg-brand text-white px-10 py-4 rounded-2xl font-black text-lg shadow-lg shadow-brand/30 active:scale-95 transition-transform">
+                    <span class="material-symbols-rounded align-middle mr-1">mic</span> Start Listening
+                </button>
+                <p class="text-[10px] text-gray-300 dark:text-gray-600">🔒 All processing happens on-device</p>
+            </div>`;
+    },
+
+    async _startMicStream() {
+        const container = document.getElementById('audio-id-content');
+        if (!container) return;
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { sampleRate: { ideal: 48000 }, channelCount: 1, echoCancellation: false, noiseSuppression: false },
+                video: false
+            });
             this.mediaStream = stream;
-            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
             const source = this.audioCtx.createMediaStreamSource(stream);
+
             this.analyser = this.audioCtx.createAnalyser();
             this.analyser.fftSize = 256;
             source.connect(this.analyser);
 
-            this.mediaRecorder = new MediaRecorder(stream);
-            this.mediaRecorder.ondataavailable = e => { if (e.data.size > 0) this.audioChunks.push(e.data); };
-            this.mediaRecorder.onstop = () => this._analyzeAudio();
-            this.mediaRecorder.start();
+            await this.audioCtx.audioWorklet.addModule('js/audio-processor.js');
+            this._audioWorkletNode = new AudioWorkletNode(this.audioCtx, 'audio-processor');
+            source.connect(this._audioWorkletNode);
+
+            const WINDOW = 144000; // 3s at 48 kHz
+            const PREDICT_INTERVAL_MS = 750;
+
+            this._audioWorkletNode.port.onmessage = (e) => {
+                if (!this.isListening) return;
+                const chunk = new Float32Array(e.data);
+                const prev = this._audioSamples || new Float32Array(0);
+                const combined = new Float32Array(prev.length + chunk.length);
+                combined.set(prev);
+                combined.set(chunk, prev.length);
+                // Keep last 6 seconds to avoid unbounded growth
+                this._audioSamples = combined.length > WINDOW * 2 ? combined.slice(-WINDOW * 2) : combined;
+
+                const now = Date.now();
+                if (this._audioSamples.length >= WINDOW && now - this._lastPredictMs >= PREDICT_INTERVAL_MS) {
+                    this._lastPredictMs = now;
+                    const window = this._audioSamples.slice(-WINDOW);
+                    this._birdnetWorker.postMessage({ message: 'predict', pcmAudio: window, overlapSec: 1.5, sensitivity: 1.0 });
+                }
+            };
+
             this.isListening = true;
+            this._listenStartTime = Date.now();
 
             this._renderAudioListening(container);
             this._drawSpectrogram(container);
 
-            // Auto-stop after 8 seconds
-            setTimeout(() => { if (this.isListening) this.stopAudio(true); }, 8000);
+            // Send geo context to improve predictions
+            const pos = this.app.map?.pos;
+            if (pos?.lat && this._birdnetWorker) {
+                this._birdnetWorker.postMessage({ message: 'area-scores', latitude: pos.lat, longitude: pos.lng });
+            }
         } catch (err) {
-            console.error('Audio ID error:', err);
+            console.error('Audio ID mic error:', err);
             container.innerHTML = `
                 <div class="text-center py-8 px-4">
                     <div class="text-5xl mb-3">🎤</div>
@@ -548,7 +697,7 @@ export const identify = {
     _renderAudioListening(container) {
         container.innerHTML = `
             <div class="flex flex-col items-center pt-4 pb-2">
-                <div class="relative w-24 h-24 flex items-center justify-center mb-4">
+                <div class="relative w-24 h-24 flex items-center justify-center mb-3">
                     <div class="absolute inset-0 bg-brand/20 rounded-full animate-ping"></div>
                     <div class="absolute inset-2 bg-brand/30 rounded-full animate-ping" style="animation-delay:0.3s"></div>
                     <div class="w-16 h-16 bg-brand rounded-full flex items-center justify-center z-10 shadow-xl shadow-brand/40">
@@ -556,22 +705,19 @@ export const identify = {
                     </div>
                 </div>
                 <p class="font-bold text-gray-800 dark:text-white mb-1">Listening…</p>
-                <p class="text-xs text-gray-400 mb-4">Recording for 8 seconds. Hold still in nature.</p>
-                <canvas id="audio-spectrogram" width="320" height="80" class="rounded-2xl bg-gray-900 w-full max-w-sm mb-4"></canvas>
-                <div id="audio-countdown" class="text-4xl font-black text-brand tabular-nums">8</div>
-                <button onclick="app.identify.stopAudio(true)" class="mt-4 px-6 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-semibold text-sm active:scale-95">Stop Early</button>
+                <p class="text-xs text-gray-400 mb-3">Results appear in real-time below as birds are detected.</p>
+                <canvas id="audio-spectrogram" width="320" height="64" class="rounded-xl bg-gray-900 w-full max-w-sm mb-3"></canvas>
+                <div id="birdnet-live-results" class="w-full space-y-2 min-h-[60px]">
+                    <p class="text-center text-xs text-gray-400 py-2">Collecting audio… results in ~3 seconds</p>
+                </div>
+                <button onclick="app.identify.stopAudio(true)"
+                    class="mt-4 px-6 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-sm active:scale-95">
+                    Stop &amp; Save Results
+                </button>
             </div>`;
-        // Countdown
-        let t = 8;
-        this._countdownTimer = setInterval(() => {
-            t--;
-            const el = document.getElementById('audio-countdown');
-            if (el) el.textContent = Math.max(t, 0);
-            if (t <= 0) clearInterval(this._countdownTimer);
-        }, 1000);
     },
 
-    _drawSpectrogram(container) {
+    _drawSpectrogram() {
         const draw = () => {
             if (!this.isListening || !this.analyser) return;
             this.animFrame = requestAnimationFrame(draw);
@@ -582,36 +728,66 @@ export const identify = {
             const data = new Uint8Array(bufLen);
             this.analyser.getByteFrequencyData(data);
 
-            // Shift existing image left by 2px
             const imgData = ctx.getImageData(2, 0, canvas.width - 2, canvas.height);
             ctx.putImageData(imgData, 0, 0);
             ctx.fillStyle = '#111827';
             ctx.fillRect(canvas.width - 2, 0, 2, canvas.height);
 
-            // Draw new column
             const slice = Math.floor(bufLen / canvas.height);
             for (let y = 0; y < canvas.height; y++) {
-                const idx = y * slice;
-                const v = data[idx] || 0;
-                const intensity = v / 255;
-                // Color: low = dark teal, high = bright green/yellow
-                const r = Math.round(intensity * 80);
-                const g = Math.round(50 + intensity * 200);
-                const b = Math.round(30 + intensity * 20);
-                ctx.fillStyle = `rgb(${r},${g},${b})`;
+                const v = (data[y * slice] || 0) / 255;
+                ctx.fillStyle = `rgb(${Math.round(v * 80)},${Math.round(50 + v * 200)},${Math.round(30 + v * 20)})`;
                 ctx.fillRect(canvas.width - 2, canvas.height - y - 1, 2, 1);
             }
         };
         draw();
     },
 
-    stopAudio(andAnalyze = false) {
+    _onPooledResults(pooled) {
+        const sorted = pooled
+            .map(r => ({ ...r, score: r.confidence * Math.max(0.01, r.geoscore) }))
+            .filter(r => r.score > 0.01 && r.commonName)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 8);
+        this._liveDetections = sorted;
+        this._updateLiveResults();
+    },
+
+    _updateLiveResults() {
+        const el = document.getElementById('birdnet-live-results');
+        if (!el) return;
+        if (!this._liveDetections.length) return;
+
+        el.innerHTML = this._liveDetections.map(r => {
+            const conf = Math.min(100, Math.round(r.confidence * 100));
+            const confColor = conf > 70 ? 'text-green-600' : conf > 40 ? 'text-amber-500' : 'text-gray-400';
+            const barColor = conf > 70 ? 'bg-green-500' : conf > 40 ? 'bg-amber-400' : 'bg-gray-400';
+            const sciEsc = r.scientificName.replace(/'/g, "\\'");
+            return `
+                <button onclick="app.ui.openSpeciesDetailByName('${sciEsc}')"
+                    class="w-full flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 active:scale-98 text-left transition-all">
+                    <div class="text-2xl shrink-0">🐦</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold text-sm text-gray-900 dark:text-white truncate">${r.commonName}</div>
+                        <div class="text-xs text-gray-400 italic truncate">${r.scientificName}</div>
+                        <div class="mt-1.5 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full ${barColor} rounded-full transition-all duration-500" style="width:${conf}%"></div>
+                        </div>
+                    </div>
+                    <span class="text-sm font-black ${confColor} shrink-0 tabular-nums">${conf}%</span>
+                </button>`;
+        }).join('');
+    },
+
+    stopAudio(andShowFinal = false) {
         this.isListening = false;
+        this._pendingMicStart = false;
         if (this.animFrame) { cancelAnimationFrame(this.animFrame); this.animFrame = null; }
         if (this._countdownTimer) { clearInterval(this._countdownTimer); this._countdownTimer = null; }
-        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-            if (andAnalyze) this.mediaRecorder.stop();
-            else this.mediaRecorder.stop();
+        if (this._audioWorkletNode) {
+            try { this._audioWorkletNode.disconnect(); } catch (_) {}
+            this._audioWorkletNode.port.onmessage = null;
+            this._audioWorkletNode = null;
         }
         if (this.mediaStream) {
             this.mediaStream.getTracks().forEach(t => t.stop());
@@ -622,120 +798,38 @@ export const identify = {
             this.audioCtx = null;
         }
         this.analyser = null;
+        this._audioSamples = null;
+
+        if (andShowFinal) this._showFinalResults();
     },
 
-    async _analyzeAudio() {
+    _showFinalResults() {
         const container = document.getElementById('audio-id-content');
         if (!container) return;
 
-        container.innerHTML = `
-            <div class="flex flex-col items-center justify-center py-12 gap-4">
-                <div class="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center animate-pulse">
-                    <span class="material-symbols-rounded text-brand text-3xl">psychology</span>
-                </div>
-                <p class="text-gray-500 font-semibold">Analyzing recording…</p>
-            </div>`;
-
-        const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
-        const settings = this.app.state.settings || {};
-
-        let birdnetResults = null;
-        if (settings.birdnetApiUrl) {
-            birdnetResults = await this._callBirdNetApi(blob, settings.birdnetApiUrl, settings.birdnetToken);
+        if (!this._liveDetections.length) {
+            container.innerHTML = `
+                <div class="text-center py-8 px-4">
+                    <div class="text-5xl mb-3">🔇</div>
+                    <h3 class="font-bold text-gray-800 dark:text-white mb-2">No birds detected</h3>
+                    <p class="text-sm text-gray-500 mb-4">Try again in a quieter outdoor spot, or hold the phone toward where you hear birds.</p>
+                    <button onclick="app.identify.startAudioId()" class="bg-brand text-white px-8 py-3 rounded-xl font-bold active:scale-95">Try Again</button>
+                </div>`;
+            return;
         }
 
-        if (!birdnetResults) {
-            // Fallback: show nearby birds from iNaturalist
-            await this._showNearbyBirdFallback(container);
-        } else {
-            this._showBirdNetResults(container, birdnetResults);
-        }
-    },
-
-    async _callBirdNetApi(blob, url, token) {
-        try {
-            const form = new FormData();
-            form.append('audio', blob, 'recording.webm');
-            form.append('lat', this.app.map.pos.lat || 0);
-            form.append('lon', this.app.map.pos.lng || 0);
-            form.append('week', Math.ceil((new Date().getMonth() + 1) * 52 / 12));
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            const res = await fetch(url, { method: 'POST', headers, body: form });
-            if (!res.ok) return null;
-            return await res.json();
-        } catch (e) {
-            console.warn('BirdNET API error:', e);
-            return null;
-        }
-    },
-
-    async _showNearbyBirdFallback(container) {
-        const lat = this.app.map.pos.lat || 40.71;
-        const lng = this.app.map.pos.lng || -74.00;
-        let birds = [];
-        try {
-            birds = await this.app.inat.queryByTraits(lat, lng, { iconic: 'Aves', limit: 12 });
-        } catch (e) {}
-
-        container.innerHTML = `
-            <div class="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-200 dark:border-amber-700 flex gap-2">
-                <span class="material-symbols-rounded text-amber-500 text-xl shrink-0 mt-0.5">info</span>
-                <div>
-                    <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">No BirdNET API configured</p>
-                    <p class="text-xs text-amber-600 dark:text-amber-400">Showing birds commonly found in your area this month. Configure a BirdNET API endpoint in Settings for real audio analysis.</p>
-                </div>
-            </div>
-            <div class="mb-3">
-                <h3 class="font-black text-gray-900 dark:text-white">🐦 Birds Near You This Month</h3>
-                <p class="text-xs text-gray-400 mt-1">Tap any species to view details or log a sighting.</p>
-            </div>
-            <div class="space-y-2">
-                ${birds.map(s => `
-                    <button onclick="app.ui.openSpeciesDetail(${s.id})"
-                        class="w-full flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 active:scale-98 transition-all text-left">
-                        <img src="${s.squareImg || s.img}" class="w-14 h-14 rounded-xl object-cover shrink-0">
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-sm text-gray-900 dark:text-white truncate">${s.name}</div>
-                            <div class="text-xs text-gray-400 italic truncate">${s.sciName}</div>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 inline-block ${s.rarity === 'Common' ? 'bg-green-100 text-green-700' : s.rarity === 'Uncommon' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}">${s.rarity}</span>
-                        </div>
-                        <span class="material-symbols-rounded text-gray-400">chevron_right</span>
-                    </button>
-                `).join('')}
-            </div>
-            <button onclick="app.identify.startAudioId()" class="w-full mt-4 py-3 bg-brand text-white font-bold rounded-xl active:scale-95">Listen Again</button>`;
-    },
-
-    _showBirdNetResults(container, results) {
-        // results expected: array of { common_name, scientific_name, confidence, label }
-        const items = Array.isArray(results) ? results : (results.results || results.detections || []);
         container.innerHTML = `
             <div class="mb-4">
                 <div class="flex items-center gap-2 mb-1">
                     <span class="material-symbols-rounded text-brand text-xl">verified</span>
                     <h3 class="font-black text-gray-900 dark:text-white">BirdNET Results</h3>
                 </div>
-                <p class="text-xs text-gray-400">Results from audio analysis of your recording.</p>
+                <p class="text-xs text-gray-400">Identified from audio on your device. Tap a species to learn more or log it.</p>
             </div>
-            <div class="space-y-3">
-                ${items.slice(0, 8).map(r => {
-                    const conf = r.confidence || r.score || 0;
-                    const pct = Math.round(conf * 100);
-                    return `
-                        <div class="p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <div class="font-bold text-sm text-gray-900 dark:text-white">${r.common_name || r.label || 'Unknown'}</div>
-                                    <div class="text-xs text-gray-400 italic">${r.scientific_name || ''}</div>
-                                </div>
-                                <span class="text-sm font-black ${pct > 70 ? 'text-green-600' : pct > 40 ? 'text-amber-600' : 'text-red-500'}">${pct}%</span>
-                            </div>
-                            <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div class="h-full bg-brand rounded-full" style="width:${pct}%"></div>
-                            </div>
-                        </div>`;
-                }).join('')}
-            </div>
+            <div id="birdnet-live-results" class="space-y-2"></div>
             <button onclick="app.identify.startAudioId()" class="w-full mt-4 py-3 bg-brand text-white font-bold rounded-xl active:scale-95">Listen Again</button>`;
+
+        this._updateLiveResults();
     }
 };
+

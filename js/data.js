@@ -111,7 +111,7 @@ export const data = {
             observations: [],
             catalogue: {},
             badges: [],
-            settings: { birdnetApiUrl: '', birdnetToken: '' }
+            settings: {}
         };
     }
 };
