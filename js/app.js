@@ -1,11 +1,11 @@
-import { haptics } from './haptics.js?v=20260419h';
-import { hud } from './hud.js?v=20260419h';
-import { ui } from './ui.js?v=20260419h';
-import { data } from './data.js?v=20260419h';
-import { map } from './map.js?v=20260419h';
-import { inat } from './inat.js?v=20260419h';
-import { identify } from './identify.js?v=20260419h';
-import { journal } from './journal.js?v=20260419h';
+import { haptics } from './haptics.js?v=20260419i';
+import { hud } from './hud.js?v=20260419i';
+import { ui } from './ui.js?v=20260419i';
+import { data } from './data.js?v=20260419i';
+import { map } from './map.js?v=20260419i';
+import { inat } from './inat.js?v=20260419i';
+import { identify } from './identify.js?v=20260419i';
+import { journal } from './journal.js?v=20260419i';
 
 const app = {
     state: {},
@@ -71,8 +71,11 @@ const app = {
             if (nearby.status === 'fulfilled' && nearby.value.length) {
                 this._preloadedObs = nearby.value;
             }
+            // Start species showcase once we have data
+            this._startSpeciesShowcase(this._preloadedObs || [], this.localSpecies || []);
         } else {
             setProgress(75, 'Location unavailable — using global data…');
+            this._startSpeciesShowcase([], this.localSpecies || []);
         }
 
         // ── 5. Warm the home sheet ──────────────────────────────────
@@ -99,6 +102,110 @@ const app = {
             setTimeout(() => btn.classList.add('launch-ready'), 80);
         }
         // _launchFromSplash() is called by the button onclick
+    },
+
+    // ── Species showcase on loading screen ─────────────────────────
+    _startSpeciesShowcase(nearbyObs, species) {
+        const showcase = document.getElementById('loading-species-showcase');
+        if (!showcase) return;
+
+        // Build showcase items — prefer nearby observations with photos
+        const items = [];
+        const seen = new Set();
+
+        const addItem = (name, sci, photoUrl, emoji, meta) => {
+            if (!name || seen.has(name)) return;
+            seen.add(name);
+            items.push({ name, sci, photoUrl, emoji, meta });
+        };
+
+        if (nearbyObs?.length) {
+            // Shuffle for variety each session
+            const shuffledObs = [...nearbyObs].sort(() => Math.random() - 0.5);
+            shuffledObs.slice(0, 12).forEach(o => {
+                const name = o.taxon?.preferred_common_name || o.taxon?.name || '';
+                const sci  = o.taxon?.name || '';
+                const photo = o.taxon?.default_photo?.square_url
+                    || (o.photos?.[0]?.url || '').replace('square', 'small')
+                    || null;
+                const emoji = this.inat.iconicEmoji(o.taxon?.iconic_taxon_name);
+                const place = o.place_guess ? o.place_guess.split(',')[0] : '';
+                const daysAgo = o.observed_on
+                    ? Math.max(0, Math.round((Date.now() - new Date(o.observed_on)) / 86400000))
+                    : null;
+                const meta = [place, daysAgo != null ? (daysAgo === 0 ? 'Today' : daysAgo + 'd ago') : '']
+                    .filter(Boolean).join(' · ');
+                addItem(name, sci, photo, emoji, meta);
+            });
+        }
+
+        // Backfill from seasonal species if we have fewer than 5
+        if (items.length < 5 && species?.length) {
+            const shuffledSp = [...species].sort(() => Math.random() - 0.5);
+            shuffledSp.slice(0, 10).forEach(s => {
+                addItem(s.name, s.sciName || '', s.squareImg || s.img || null,
+                    this.inat.iconicEmoji(s.iconic), 'In season nearby');
+            });
+        }
+
+        if (!items.length) return;
+
+        // Update orbit ring items with local species emojis
+        const orbitEls = document.querySelectorAll('.orbit-item');
+        const uniqueEmojis = [...new Set(items.map(it => it.emoji).filter(Boolean))];
+        if (uniqueEmojis.length >= 3) {
+            orbitEls.forEach((el, idx) => {
+                el.textContent = uniqueEmojis[idx % uniqueEmojis.length];
+            });
+        }
+
+        // Dot indicators
+        const dotsEl = document.getElementById('loading-showcase-dots');
+        if (dotsEl) {
+            dotsEl.innerHTML = items.map((_, i) =>
+                `<span class="showcase-dot${i === 0 ? ' active' : ''}"></span>`
+            ).join('');
+        }
+
+        let current = 0;
+        const showItem = (idx) => {
+            const item = items[idx];
+            const card    = document.getElementById('loading-showcase-card');
+            const imgEl   = document.getElementById('loading-showcase-img');
+            const nameEl  = document.getElementById('loading-showcase-name');
+            const sciEl   = document.getElementById('loading-showcase-sci');
+            const metaEl  = document.getElementById('loading-showcase-meta');
+            if (!nameEl) return;
+
+            if (card) card.style.opacity = '0';
+            setTimeout(() => {
+                if (imgEl) {
+                    if (item.photoUrl) {
+                        imgEl.innerHTML = `<img src="${item.photoUrl}" alt="" onerror="this.parentElement.textContent='${item.emoji}'">`;
+                    } else {
+                        imgEl.innerHTML = '';
+                        imgEl.textContent = item.emoji;
+                    }
+                }
+                if (nameEl) nameEl.textContent = item.name;
+                if (sciEl)  sciEl.textContent  = item.sci;
+                if (metaEl) metaEl.textContent  = item.meta;
+                document.querySelectorAll('.showcase-dot').forEach((d, i) => {
+                    d.classList.toggle('active', i === idx);
+                });
+                if (card) card.style.opacity = '1';
+            }, 260);
+        };
+
+        // Reveal and start
+        showcase.classList.add('visible');
+        showItem(0);
+
+        const iv = setInterval(() => {
+            if (!document.getElementById('loading-screen')) { clearInterval(iv); return; }
+            current = (current + 1) % items.length;
+            showItem(current);
+        }, 3200);
     },
 
     _launchFromSplash() {

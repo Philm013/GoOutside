@@ -67,6 +67,9 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
 #panel-obs-detail { top: var(--top-h) !important; }
 
 /* ── Loading Screen ───────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   LOADING / SPLASH SCREEN
+   ══════════════════════════════════════════════════════════════ */
 #loading-screen {
     position: fixed;
     inset: 0;
@@ -74,37 +77,43 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(160deg, #0d3b2e 0%, #1b4332 40%, #2d6a4f 100%);
+    background: linear-gradient(160deg, #0a2e1f 0%, #1b4332 45%, #2d6a4f 100%);
     overflow: hidden;
 }
 #loading-screen.loading-out {
-    animation: loadingFadeOut 0.6s ease-in forwards;
+    animation: loadingFadeOut 0.55s ease-in forwards;
 }
 @keyframes loadingFadeOut {
-    to { opacity: 0; transform: scale(1.04); }
+    to { opacity: 0; transform: scale(1.03); }
 }
+
+/* ── Inner column ──────────────────────────────────────────── */
 #loading-inner {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
+    width: 100%;
+    max-width: 340px;
+    padding: 20px 24px 32px;
     gap: 0;
-    padding: 24px;
     animation: loadingRise 0.7s cubic-bezier(0.22,1,0.36,1) both;
     position: relative;
     z-index: 1;
+    overflow-y: auto;
+    max-height: 100svh;
 }
 @keyframes loadingRise {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(24px); }
     to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Orbit ─────────────────────────────────────────────────── */
+/* ── ① Orbit ───────────────────────────────────────────────── */
 #loading-orbit-wrap {
     position: relative;
-    width: 160px;
-    height: 160px;
-    margin-bottom: 20px;
+    width: 140px;
+    height: 140px;
+    margin-bottom: 16px;
     flex-shrink: 0;
 }
 #loading-logo {
@@ -113,20 +122,20 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 64px;
+    font-size: 56px;
     line-height: 1;
     animation: earthPulse 4s ease-in-out infinite;
-    filter: drop-shadow(0 0 24px rgba(82,183,136,0.6));
+    filter: drop-shadow(0 0 20px rgba(82,183,136,0.65));
     z-index: 2;
 }
 @keyframes earthPulse {
-    0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 20px rgba(82,183,136,0.5)); }
-    50%       { transform: scale(1.06); filter: drop-shadow(0 0 36px rgba(82,183,136,0.9)); }
+    0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 18px rgba(82,183,136,0.5)); }
+    50%       { transform: scale(1.07); filter: drop-shadow(0 0 34px rgba(82,183,136,0.9)); }
 }
 .orbit-ring {
     position: absolute;
     inset: 0;
-    animation: orbitSpin 12s linear infinite;
+    animation: orbitSpin 14s linear infinite;
     z-index: 1;
 }
 @keyframes orbitSpin {
@@ -135,50 +144,55 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
 }
 .orbit-item {
     position: absolute;
-    font-size: 22px;
-    /* Place each item on the ring circumference */
+    font-size: 20px;
     top: 50%;
     left: 50%;
-    /* radius = half the orbit-wrap minus half the item size */
-    transform: rotate(calc(var(--i) * 45deg)) translateY(-68px) rotate(calc(var(--i) * -45deg));
-    margin-top: -14px;
-    margin-left: -14px;
-    width: 28px;
-    height: 28px;
+    transform: rotate(calc(var(--i) * 45deg)) translateY(-60px) rotate(calc(var(--i) * -45deg));
+    margin-top: -12px;
+    margin-left: -12px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Counter-rotate so emoji stays upright as ring spins */
-    animation: orbitCounter 12s linear infinite;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+    animation: orbitCounter 14s linear infinite;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35));
+    transition: all 0.6s ease;
 }
 @keyframes orbitCounter {
-    from { transform: rotate(calc(var(--i) * 45deg)) translateY(-68px) rotate(calc(-1 * var(--i) * 45deg)) rotate(0deg); }
-    to   { transform: rotate(calc(var(--i) * 45deg)) translateY(-68px) rotate(calc(-1 * var(--i) * 45deg)) rotate(-360deg); }
+    from { transform: rotate(calc(var(--i) * 45deg)) translateY(-60px) rotate(calc(-1 * var(--i) * 45deg)) rotate(0deg); }
+    to   { transform: rotate(calc(var(--i) * 45deg)) translateY(-60px) rotate(calc(-1 * var(--i) * 45deg)) rotate(-360deg); }
 }
 
+/* ── ② Brand ───────────────────────────────────────────────── */
 #loading-title {
     font-family: 'Sora', sans-serif;
-    font-size: 34px;
-    font-weight: 800;
+    font-size: 30px;
+    font-weight: 900;
     color: #d8f3dc;
-    line-height: 1.15;
+    line-height: 1.1;
     letter-spacing: -0.5px;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
 }
 #loading-tagline {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
-    color: #52b788;
-    margin-bottom: 28px;
-    letter-spacing: 0.2px;
+    color: #74c69d;
+    margin-bottom: 20px;
+    letter-spacing: 0.3px;
+}
+
+/* ── ③ Progress ────────────────────────────────────────────── */
+#loading-progress-section {
+    width: 100%;
+    margin-bottom: 16px;
 }
 #loading-progress-wrap {
-    width: 200px;
-    height: 4px;
-    background: rgba(255,255,255,0.12);
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,0.1);
     border-radius: 2px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     overflow: hidden;
 }
 #loading-progress-bar {
@@ -189,36 +203,149 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
     transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
 }
 #loading-status {
-    font-size: 12px;
+    font-size: 11px;
     color: #52b788;
-    margin-bottom: 16px;
-    letter-spacing: 0.1px;
-    min-height: 16px;
+    letter-spacing: 0.15px;
+    min-height: 14px;
     transition: opacity 0.3s ease;
+    text-align: center;
 }
-#loading-flavor {
-    font-size: 12px;
+
+/* ── ④ Locally sighted species showcase ───────────────────── */
+#loading-species-showcase {
+    width: 100%;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    margin-bottom: 14px;
+    pointer-events: none;
+}
+#loading-species-showcase.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+#loading-showcase-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #52b788;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+.loading-showcase-icon { font-style: normal; }
+#loading-showcase-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 16px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: opacity 0.25s ease;
+    min-height: 72px;
+}
+#loading-showcase-img {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.08);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    overflow: hidden;
+}
+#loading-showcase-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+}
+#loading-showcase-info {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+}
+#loading-showcase-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #d8f3dc;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+#loading-showcase-sci {
+    font-size: 11px;
     color: #74c69d;
-    max-width: 260px;
-    line-height: 1.5;
     font-style: italic;
-    min-height: 54px;
-    transition: opacity 0.3s ease;
-    margin-bottom: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
 }
+#loading-showcase-meta {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#loading-showcase-dots {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 8px;
+}
+.showcase-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+.showcase-dot.active {
+    background: #52b788;
+    transform: scale(1.3);
+}
+
+/* ── ⑤ Flavor quote ────────────────────────────────────────── */
+#loading-flavor {
+    font-size: 11.5px;
+    color: #74c69d;
+    max-width: 270px;
+    line-height: 1.55;
+    font-style: italic;
+    min-height: 50px;
+    transition: opacity 0.35s ease;
+    margin-bottom: 18px;
+    opacity: 0.85;
+}
+
+/* ── ⑥ Launch button ───────────────────────────────────────── */
 #loading-launch-btn {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 14px 36px;
+    padding: 14px 40px;
     background: var(--brand);
     color: white;
     border-radius: 99px;
     font-size: 16px;
     font-weight: 800;
     letter-spacing: 0.2px;
-    box-shadow: 0 6px 28px rgba(45,106,79,0.55);
-    transition: transform 0.15s, opacity 0.3s, box-shadow 0.15s;
+    box-shadow: 0 6px 28px rgba(45,106,79,0.6);
+    transition: transform 0.15s, box-shadow 0.15s;
     cursor: pointer;
 }
 #loading-launch-btn:active {
@@ -234,7 +361,7 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
     to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* Floating background orbs (ambient, behind content) */
+/* ── Floating ambient orbs ─────────────────────────────────── */
 #loading-orbs {
     position: absolute;
     inset: 0;
@@ -245,22 +372,22 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
 .orb {
     position: absolute;
     font-size: 28px;
-    opacity: 0.1;
+    opacity: 0.08;
     animation: orbFloat linear infinite;
     will-change: transform;
 }
-.orb-1 { left: 8%;  top: 15%; font-size: 40px; animation-duration: 14s; animation-delay: 0s; }
-.orb-2 { left: 75%; top: 10%; font-size: 24px; animation-duration: 11s; animation-delay: 1s; }
-.orb-3 { left: 20%; top: 70%; font-size: 32px; animation-duration: 17s; animation-delay: 2s; }
-.orb-4 { left: 60%; top: 60%; font-size: 22px; animation-duration: 13s; animation-delay: 0.5s; }
-.orb-5 { left: 85%; top: 40%; font-size: 30px; animation-duration: 15s; animation-delay: 3s; }
-.orb-6 { left: 5%;  top: 50%; font-size: 26px; animation-duration: 12s; animation-delay: 1.5s; }
-.orb-7 { left: 45%; top: 85%; font-size: 20px; animation-duration: 16s; animation-delay: 0.8s; }
-.orb-8 { left: 35%; top: 5%;  font-size: 28px; animation-duration: 10s; animation-delay: 2.5s; }
+.orb-1 { left: 6%;  top: 12%; font-size: 44px; animation-duration: 14s; animation-delay: 0s; }
+.orb-2 { left: 78%; top: 8%;  font-size: 26px; animation-duration: 11s; animation-delay: 1s; }
+.orb-3 { left: 18%; top: 72%; font-size: 34px; animation-duration: 17s; animation-delay: 2s; }
+.orb-4 { left: 62%; top: 62%; font-size: 22px; animation-duration: 13s; animation-delay: 0.5s; }
+.orb-5 { left: 88%; top: 38%; font-size: 30px; animation-duration: 15s; animation-delay: 3s; }
+.orb-6 { left: 3%;  top: 52%; font-size: 24px; animation-duration: 12s; animation-delay: 1.5s; }
+.orb-7 { left: 50%; top: 88%; font-size: 20px; animation-duration: 16s; animation-delay: 0.8s; }
+.orb-8 { left: 32%; top: 3%;  font-size: 28px; animation-duration: 10s; animation-delay: 2.5s; }
 @keyframes orbFloat {
-    0%   { transform: translateY(0px) rotate(0deg); opacity: 0.1; }
-    50%  { transform: translateY(-22px) rotate(10deg); opacity: 0.18; }
-    100% { transform: translateY(0px) rotate(0deg); opacity: 0.1; }
+    0%   { transform: translateY(0px) rotate(0deg); opacity: 0.08; }
+    50%  { transform: translateY(-24px) rotate(12deg); opacity: 0.15; }
+    100% { transform: translateY(0px) rotate(0deg); opacity: 0.08; }
 }
 
 /* ── Panels ───────────────────────────────────────────────────── */

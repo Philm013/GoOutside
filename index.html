@@ -72,6 +72,7 @@
 
 <!-- ══ LOADING SCREEN ═════════════════════════════════════════ -->
 <div id="loading-screen">
+    <!-- Ambient floating background emojis -->
     <div id="loading-orbs" aria-hidden="true">
         <span class="orb orb-1">🌿</span>
         <span class="orb orb-2">🦋</span>
@@ -82,7 +83,10 @@
         <span class="orb orb-7">🦊</span>
         <span class="orb orb-8">🐸</span>
     </div>
+
     <div id="loading-inner">
+
+        <!-- ① Earth orbit -->
         <div id="loading-orbit-wrap" aria-hidden="true">
             <div id="loading-logo">🌍</div>
             <div class="orbit-ring" id="orbit-ring">
@@ -96,16 +100,43 @@
                 <span class="orbit-item" style="--i:7">🐸</span>
             </div>
         </div>
+
+        <!-- ② Brand -->
         <h1 id="loading-title">Earth Day<br>Everyday</h1>
         <p id="loading-tagline">Every day is a chance to discover nature.</p>
-        <div id="loading-progress-wrap">
-            <div id="loading-progress-bar"></div>
+
+        <!-- ③ Progress -->
+        <div id="loading-progress-section">
+            <div id="loading-progress-wrap">
+                <div id="loading-progress-bar"></div>
+            </div>
+            <p id="loading-status">Starting up…</p>
         </div>
-        <p id="loading-status">Starting up…</p>
+
+        <!-- ④ Locally sighted species showcase (hidden until data loads) -->
+        <div id="loading-species-showcase">
+            <p id="loading-showcase-label">
+                <span class="loading-showcase-icon">📍</span> Spotted Nearby
+            </p>
+            <div id="loading-showcase-card">
+                <div id="loading-showcase-img" aria-hidden="true">🌱</div>
+                <div id="loading-showcase-info">
+                    <p id="loading-showcase-name">Scanning local area…</p>
+                    <p id="loading-showcase-sci"></p>
+                    <p id="loading-showcase-meta"></p>
+                </div>
+            </div>
+            <div id="loading-showcase-dots"></div>
+        </div>
+
+        <!-- ⑤ Rotating nature quote -->
         <p id="loading-flavor"></p>
+
+        <!-- ⑥ Launch -->
         <button id="loading-launch-btn" class="hidden" onclick="app._launchFromSplash()">
             <span class="material-symbols-rounded">eco</span> Start Exploring
         </button>
+
     </div>
 </div>
 
@@ -703,6 +734,6 @@
      style="bottom: calc(var(--nav-h) + 8px)"></div>
 
 <!-- APP LOGIC -->
-<script type="module" src="js/app.js?v=20260419h"></script>
+<script type="module" src="js/app.js?v=20260419i"></script>
 </body>
 </html>
