@@ -2,6 +2,8 @@
 export const journal = {
     currentImage: null,
     currentImageBase64: null,
+    _pendingObsLocation: null,
+    _moveObsId: null,
 
     init(app) {
         this.app = app;
@@ -43,6 +45,110 @@ export const journal = {
         const reader = new FileReader();
         reader.onload = e => this.setImagePreview(e.target.result);
         reader.readAsDataURL(file);
+        // Also try to extract EXIF GPS
+        const gpsReader = new FileReader();
+        gpsReader.onload = e => {
+            try {
+                const gps = this._parseExifGPS(e.target.result);
+                if (gps) this._showExifLocationBanner(gps.lat, gps.lng);
+            } catch (_) {}
+        };
+        gpsReader.readAsArrayBuffer(file);
+    },
+
+    // ─── EXIF GPS PARSER ──────────────────────────────────────────
+    _parseExifGPS(buffer) {
+        const view = new DataView(buffer);
+        // Must be JPEG
+        if (view.byteLength < 4 || view.getUint16(0) !== 0xFFD8) return null;
+        let offset = 2;
+        while (offset < view.byteLength - 4) {
+            const marker = view.getUint16(offset);
+            const segLen = view.getUint16(offset + 2);
+            if (marker === 0xFFE1) {
+                // APP1 — check for "Exif\0\0"
+                if (view.byteLength < offset + 10) break;
+                const exif = view.getUint32(offset + 4);
+                if (exif !== 0x45786966) break; // "Exif"
+                const tiffStart = offset + 10;
+                const bo = view.getUint16(tiffStart); // byte order
+                const le = bo === 0x4949; // II = little-endian
+                const get16 = (o) => view.getUint16(tiffStart + o, le);
+                const get32 = (o) => view.getUint32(tiffStart + o, le);
+                const getRat = (o) => {
+                    const num = view.getUint32(tiffStart + o, le);
+                    const den = view.getUint32(tiffStart + o + 4, le);
+                    return den ? num / den : 0;
+                };
+                // IFD0 offset
+                const ifd0 = get32(4);
+                const entryCount = get16(ifd0);
+                let gpsIFDOffset = null;
+                for (let i = 0; i < entryCount; i++) {
+                    const base = ifd0 + 2 + i * 12;
+                    if (get16(base) === 0x8825) { gpsIFDOffset = get32(base + 8); break; }
+                }
+                if (gpsIFDOffset === null) return null;
+                const gpsCount = get16(gpsIFDOffset);
+                const tags = {};
+                for (let i = 0; i < gpsCount; i++) {
+                    const base = gpsIFDOffset + 2 + i * 12;
+                    const tag = get16(base);
+                    const valOffset = get32(base + 8);
+                    tags[tag] = valOffset;
+                }
+                // Tags: 0x1=LatRef, 0x2=Lat, 0x3=LngRef, 0x4=Lng
+                if (!(0x2 in tags && 0x4 in tags)) return null;
+                const lat = getRat(tags[0x2]) + getRat(tags[0x2] + 8) / 60 + getRat(tags[0x2] + 16) / 3600;
+                const lng = getRat(tags[0x4]) + getRat(tags[0x4] + 8) / 60 + getRat(tags[0x4] + 16) / 3600;
+                // Read ref chars from buffer
+                let latSign = 1, lngSign = 1;
+                try {
+                    const lrOff = tiffStart + tags[0x1];
+                    const lrChar = String.fromCharCode(view.getUint8(lrOff));
+                    if (lrChar === 'S') latSign = -1;
+                    const loOff = tiffStart + tags[0x3];
+                    const loChar = String.fromCharCode(view.getUint8(loOff));
+                    if (loChar === 'W') lngSign = -1;
+                } catch (_) {}
+                if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return null;
+                return { lat: latSign * lat, lng: lngSign * lng };
+            }
+            offset += 2 + segLen;
+        }
+        return null;
+    },
+
+    _showExifLocationBanner(lat, lng) {
+        const existing = document.getElementById('obs-exif-banner');
+        if (existing) existing.remove();
+        const latStr = lat.toFixed(5);
+        const lngStr = lng.toFixed(5);
+        const banner = document.createElement('div');
+        banner.id = 'obs-exif-banner';
+        banner.className = 'mx-4 mt-0 mb-2 bg-brand/10 border border-brand/20 rounded-xl p-3 flex items-start gap-3 animate-fade-in';
+        banner.innerHTML = `
+            <span class="material-symbols-rounded text-brand mt-0.5 shrink-0">photo_camera</span>
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-bold text-brand">Photo location found</p>
+                <p class="text-[11px] text-gray-500">${latStr}, ${lngStr}</p>
+            </div>
+            <div class="flex gap-2 shrink-0">
+                <button onclick="app.journal._useExifLocation(${lat},${lng})"
+                    class="text-xs font-bold text-white bg-brand px-3 py-1.5 rounded-lg active:scale-95">Use</button>
+                <button onclick="document.getElementById('obs-exif-banner')?.remove()"
+                    class="text-xs font-bold text-gray-400 px-2 py-1.5 active:opacity-70">Ignore</button>
+            </div>`;
+        // Insert after the photo section in the log form
+        const photoDiv = document.querySelector('#logObsContent .overflow-y-auto > div:first-child');
+        if (photoDiv) photoDiv.after(banner);
+    },
+
+    _useExifLocation(lat, lng) {
+        this._pendingObsLocation = { lat, lng };
+        document.getElementById('obs-exif-banner')?.remove();
+        this._updateLocationDisplay(lat, lng);
+        if (this.app.ui) this.app.ui.showToast('📍 Using photo location');
     },
 
     // ─── SUBMIT OBSERVATION ──────────────────────────────────────
@@ -64,8 +170,8 @@ export const journal = {
             return;
         }
 
-        const lat = this.app.map.pos.lat || null;
-        const lng = this.app.map.pos.lng || null;
+        const lat = (this._pendingObsLocation?.lat) ?? (this.app.map.pos.lat || null);
+        const lng = (this._pendingObsLocation?.lng) ?? (this.app.map.pos.lng || null);
         const count = Math.max(parseInt(countEl?.value || '1', 10), 1);
         const notes = (notesEl?.value || '').trim();
         const habitat = habitatEl?.value || 'General';
@@ -171,6 +277,8 @@ export const journal = {
                 </div>
                 <div class="text-[10px] text-gray-400 mt-1 text-right">${lv.curr} / ${lv.req} to Lv.${lv.level + 1}</div>
             </div>`;
+        const countEl = document.getElementById('journal-entry-count');
+        if (countEl) countEl.textContent = obs.length + (obs.length === 1 ? ' entry' : ' entries');
     },
 
     _renderTimeline() {
@@ -229,5 +337,39 @@ export const journal = {
         return Object.entries(counts)
             .map(([k, v]) => ({ iconic: k, count: v, emoji: this.app.inat.iconicEmoji(k), label: this.app.inat.iconicLabel(k) }))
             .sort((a, b) => b.count - a.count);
+    },
+
+    // ─── LOCATION PICKER ─────────────────────────────────────────
+    _updateLocationDisplay(lat, lng) {
+        const el = document.getElementById('obs-location-display');
+        if (el) el.textContent = lat.toFixed(4) + ', ' + lng.toFixed(4);
+    },
+
+    confirmPickedLocation() {
+        const loc = this.app.ui._pickerTempLocation;
+        if (!loc) { this.app.ui.closeLocationPicker(); return; }
+
+        // If we're moving an existing observation
+        if (this._moveObsId) {
+            const obs = this.app.state.observations.find(o => o.id === this._moveObsId);
+            if (obs) {
+                obs.lat = loc.lat;
+                obs.lng = loc.lng;
+                this.app.saveState();
+                // Update map marker
+                this.app.map.personalMarkers.forEach(m => {
+                    if (m.obsId === this._moveObsId) m.setLatLng([loc.lat, loc.lng]);
+                });
+                this.app.ui.showToast('📍 Observation moved');
+            }
+            this._moveObsId = null;
+            this.app.ui.closeLocationPicker();
+            return;
+        }
+
+        this._pendingObsLocation = { lat: loc.lat, lng: loc.lng };
+        this._updateLocationDisplay(loc.lat, loc.lng);
+        this.app.ui.closeLocationPicker();
+        this.app.ui.showToast('📍 Location set');
     }
 };

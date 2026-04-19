@@ -278,9 +278,22 @@
         <div class="px-4 pt-3 shrink-0">
             <div id="journal-stats"></div>
         </div>
-        <div class="bg-surface-light dark:bg-surface-dark shrink-0 px-4 pb-2">
-            <input id="journal-search" type="text" placeholder="Search observations…"
-                class="w-full bg-gray-100 dark:bg-gray-800 pl-4 pr-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand dark:text-white">
+        <!-- Collapsible search bar -->
+        <div id="journal-search-bar" class="shrink-0 bg-surface-light dark:bg-surface-dark px-4 py-2 border-b border-transparent dark:border-transparent">
+            <!-- Collapsed: tappable hint -->
+            <button id="journal-search-trigger" onclick="app.ui.openJournalSearch()"
+                class="w-full flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-2.5 text-gray-400 text-sm text-left active:bg-gray-200 transition-colors">
+                <span class="material-symbols-rounded text-base">search</span>
+                <span class="flex-1">Search observations…</span>
+                <span id="journal-entry-count" class="text-[10px] font-bold text-gray-300 dark:text-gray-600"></span>
+            </button>
+            <!-- Expanded: live input + cancel -->
+            <div id="journal-search-expanded" class="hidden items-center gap-2">
+                <input id="journal-search" type="text" placeholder="Search observations…"
+                    oninput="app.journal._renderTimeline()"
+                    class="flex-1 bg-gray-100 dark:bg-gray-800 pl-4 pr-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand dark:text-white">
+                <button onclick="app.ui.closeJournalSearch()" class="text-brand font-bold text-sm px-2 shrink-0 active:opacity-70">Cancel</button>
+            </div>
         </div>
         <div class="bg-surface-light dark:bg-surface-dark border-b border-gray-100 dark:border-gray-700 shrink-0">
             <div id="journal-filter-tabs" class="flex gap-2 overflow-x-auto p-3 hide-scrollbar">
@@ -502,6 +515,18 @@
                 <textarea id="obs-notes" placeholder="Behaviour, weather, habitat details…" rows="3"
                     class="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm dark:text-white outline-none focus:ring-2 focus:ring-brand resize-none"></textarea>
             </div>
+            <!-- Location -->
+            <div>
+                <label class="text-xs font-black uppercase tracking-wider text-gray-500 block mb-2">Location</label>
+                <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
+                    <span class="material-symbols-rounded text-brand text-lg shrink-0">location_on</span>
+                    <span id="obs-location-display" class="flex-1 text-sm text-gray-500 dark:text-gray-400 truncate">Using GPS location</span>
+                    <button onclick="app.ui.openLocationPicker()"
+                        class="text-xs font-bold text-brand px-3 py-1.5 bg-brand/10 rounded-lg active:scale-95 transition-transform shrink-0">
+                        Pick
+                    </button>
+                </div>
+            </div>
         </div>
         <div class="p-4 shrink-0 border-t border-gray-100 dark:border-gray-700">
             <button onclick="app.journal.submitObservation()"
@@ -577,6 +602,36 @@
     </div>
 </div>
 
+<!-- Location Picker Modal -->
+<div id="locationPickerModal" class="fixed inset-0 z-[70] pointer-events-none opacity-0 transition-opacity duration-300 flex flex-col">
+    <div class="absolute inset-0 bg-black/40" onclick="app.ui.closeLocationPicker()"></div>
+    <!-- Header -->
+    <div class="relative z-10 bg-surface-light dark:bg-surface-dark flex items-center justify-between px-4 shrink-0 shadow-lg"
+         style="height: var(--top-h); padding-top: env(safe-area-inset-top)">
+        <button onclick="app.ui.closeLocationPicker()" class="flex items-center gap-1.5 text-brand font-bold text-sm">
+            <span class="material-symbols-rounded text-base">close</span> Cancel
+        </button>
+        <span class="font-black text-base" style="font-family:Sora,sans-serif">Pick Location</span>
+        <button onclick="app.journal.confirmPickedLocation()" class="bg-brand text-white px-4 py-2 rounded-xl font-bold text-sm active:scale-95">
+            Confirm
+        </button>
+    </div>
+    <!-- Map fills remaining space -->
+    <div id="location-picker-map" class="relative flex-1 z-10"></div>
+    <!-- Center crosshair (pointer-events-none so map stays interactive) -->
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-20" style="margin-top: var(--top-h)">
+        <div class="flex flex-col items-center -mt-5">
+            <span class="material-symbols-rounded text-brand drop-shadow-lg" style="font-size:42px">location_on</span>
+            <div class="w-2 h-2 rounded-full bg-brand/50 -mt-1"></div>
+        </div>
+    </div>
+    <!-- Coords display at bottom -->
+    <div class="relative z-10 bg-surface-light dark:bg-surface-dark border-t border-gray-100 dark:border-gray-700 px-4 py-3 shrink-0" style="padding-bottom: calc(env(safe-area-inset-bottom) + 12px)">
+        <p class="text-xs text-gray-400 text-center">Pan the map to position the pin, then tap Confirm</p>
+        <p id="location-picker-coords" class="text-sm font-bold text-brand text-center mt-1"></p>
+    </div>
+</div>
+
 <!-- Knowledge Graph Modal -->
 <div id="kgModal" class="fixed inset-0 z-100 flex items-end justify-center pointer-events-none opacity-0 transition-opacity duration-300" style="z-index:100">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="app.ui.closeKGModal()"></div>
@@ -648,6 +703,6 @@
      style="bottom: calc(var(--nav-h) + 8px)"></div>
 
 <!-- APP LOGIC -->
-<script type="module" src="js/app.js?v=20260419g"></script>
+<script type="module" src="js/app.js?v=20260419h"></script>
 </body>
 </html>

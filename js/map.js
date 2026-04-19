@@ -115,7 +115,22 @@ export const map = {
             iconSize: [40, 40],
             iconAnchor: [20, 20]
         });
-        const marker = L.marker([obs.lat, obs.lng], { icon }).addTo(this.personalLayer);
+        const marker = L.marker([obs.lat, obs.lng], { icon, draggable: true }).addTo(this.personalLayer);
+        marker.obsId = obs.id;
+        marker.on('dragstart', () => {
+            marker.closePopup();
+            if (this.app.ui) this.app.ui.showToast('Drag to reposition');
+        });
+        marker.on('dragend', () => {
+            const { lat, lng } = marker.getLatLng();
+            const o = this.app.state.observations.find(o => o.id === marker.obsId);
+            if (o) {
+                o.lat = lat;
+                o.lng = lng;
+                this.app.saveState();
+                if (this.app.ui) this.app.ui.showToast('📍 Location updated');
+            }
+        });
         const popupHtml = "<div class='com-popup'>" +
             (obs.photo ? "<img src='" + obs.photo + "' class='com-popup-img'>" : "<div class='com-popup-emoji'>" + emoji + "</div>") +
             "<div class='com-popup-body'>" +

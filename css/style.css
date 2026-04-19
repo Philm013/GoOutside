@@ -895,3 +895,26 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
     transition: opacity 0.15s;
 }
 .com-popup-btn:active { opacity: 0.8; }
+
+/* ── Journal search expanded state ───────────────────────────── */
+#journal-search-bar {
+    transition: border-color 0.2s ease;
+}
+
+/* ── Location picker modal ────────────────────────────────────── */
+#locationPickerModal {
+    display: flex;
+    flex-direction: column;
+}
+#location-picker-map {
+    z-index: 10;
+}
+#locationPickerModal.opacity-0 { display: none; }
+#locationPickerModal.opacity-100 { display: flex; }
+
+/* ── Obs exif banner animate-in ──────────────────────────────── */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.2s ease forwards; }

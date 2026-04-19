@@ -420,7 +420,10 @@ export const ui = {
             (obs.habitat ? '<div class="text-sm text-gray-600 dark:text-gray-300"><span class="font-bold">Habitat:</span> ' + obs.habitat + '</div>' : '') +
             (obs.count > 1 ? '<div class="text-sm text-gray-600 dark:text-gray-300"><span class="font-bold">Count:</span> ' + obs.count + '</div>' : '') +
             (obs.notes ? '<div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-3 text-sm text-gray-700 dark:text-gray-300">' + obs.notes + '</div>' : '') +
-            '<button onclick="app.ui.openSpeciesDetail(' + obs.taxonId + ')" class="w-full border border-brand text-brand py-3 rounded-2xl font-bold text-sm active:scale-95 transition-transform">View Species Info</button></div>';
+            '<button onclick="app.ui.openSpeciesDetail(' + obs.taxonId + ')" class="w-full border border-brand text-brand py-3 rounded-2xl font-bold text-sm active:scale-95 transition-transform">View Species Info</button>' +
+            '<button onclick="app.ui.moveObsOnMap(\'' + obs.id + '\')" class="w-full border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-3 rounded-2xl font-bold text-sm active:scale-95 transition-transform mt-2 flex items-center justify-center gap-2">' +
+            '<span class="material-symbols-rounded text-base">edit_location</span> Move on Map</button>' +
+            '</div>';
     },
 
     closeObsDetail() {
@@ -441,6 +444,11 @@ export const ui = {
         if (specBtn) { specBtn.textContent = 'Select species…'; delete specBtn.dataset.id; delete specBtn.dataset.name; delete specBtn.dataset.iconic; }
         const notes = document.getElementById('obs-notes');
         if (notes) notes.value = '';
+        this.app.journal._pendingObsLocation = null;
+        const locEl = document.getElementById('obs-location-display');
+        if (locEl) locEl.textContent = 'Using GPS location';
+        const exifBanner = document.getElementById('obs-exif-banner');
+        if (exifBanner) exifBanner.remove();
         const count = document.getElementById('obs-count');
         if (count) count.value = '1';
         modal.classList.remove('pointer-events-none', 'opacity-0', 'hidden');
@@ -678,6 +686,120 @@ export const ui = {
         document.querySelectorAll('.journal-filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         if (this.app.journal && this.app.journal._renderTimeline) this.app.journal._renderTimeline();
+    },
+
+    openJournalSearch() {
+        const panel = document.getElementById('panel-journal');
+        const trigger = document.getElementById('journal-search-trigger');
+        const expanded = document.getElementById('journal-search-expanded');
+        const input = document.getElementById('journal-search');
+        const stats = document.getElementById('journal-stats');
+        const statsWrap = stats?.closest('.px-4.pt-3');
+        const filters = document.querySelector('#panel-journal .bg-surface-light.border-b');
+        const timeline = document.getElementById('journal-timeline');
+        if (!panel || !trigger || !expanded) return;
+
+        trigger.classList.add('hidden');
+        expanded.classList.remove('hidden');
+        expanded.classList.add('flex');
+
+        if (statsWrap) statsWrap.classList.add('hidden');
+        if (filters) filters.classList.add('hidden');
+        if (timeline) {
+            timeline.classList.remove('grid-cols-2', 'gap-3');
+            timeline.classList.add('grid-cols-1', 'gap-2');
+        }
+
+        const searchBar = document.getElementById('journal-search-bar');
+        if (searchBar) searchBar.classList.add('border-b', 'border-gray-100', 'dark:border-gray-700');
+
+        setTimeout(() => input?.focus(), 50);
+    },
+
+    closeJournalSearch() {
+        const trigger = document.getElementById('journal-search-trigger');
+        const expanded = document.getElementById('journal-search-expanded');
+        const input = document.getElementById('journal-search');
+        const stats = document.getElementById('journal-stats');
+        const statsWrap = stats?.closest('.px-4.pt-3');
+        const filters = document.querySelector('#panel-journal .bg-surface-light.border-b');
+        const timeline = document.getElementById('journal-timeline');
+
+        if (input) input.value = '';
+        if (trigger) trigger.classList.remove('hidden');
+        if (expanded) { expanded.classList.add('hidden'); expanded.classList.remove('flex'); }
+        if (statsWrap) statsWrap.classList.remove('hidden');
+        if (filters) filters.classList.remove('hidden');
+        if (timeline) {
+            timeline.classList.add('grid-cols-2', 'gap-3');
+            timeline.classList.remove('grid-cols-1', 'gap-2');
+        }
+
+        const searchBar = document.getElementById('journal-search-bar');
+        if (searchBar) searchBar.classList.remove('border-b', 'border-gray-100', 'dark:border-gray-700');
+
+        input?.blur();
+        this.app.journal._renderTimeline();
+    },
+
+    openLocationPicker() {
+        const modal = document.getElementById('locationPickerModal');
+        if (!modal) return;
+        modal.classList.remove('pointer-events-none', 'opacity-0');
+        modal.classList.add('opacity-100', 'pointer-events-auto');
+
+        if (!this._pickerMap) {
+            const lat = this.app.map.pos.lat || 0;
+            const lng = this.app.map.pos.lng || 0;
+            this._pickerMap = L.map('location-picker-map', { zoomControl: false }).setView(
+                [lat || 20, lng || 0], lat ? 15 : 2
+            );
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(this._pickerMap);
+            const pending = this.app.journal._pendingObsLocation;
+            if (pending) this._pickerMap.setView([pending.lat, pending.lng], 16);
+
+            this._pickerMap.on('move', () => {
+                const c = this._pickerMap.getCenter();
+                const el = document.getElementById('location-picker-coords');
+                if (el) el.textContent = c.lat.toFixed(5) + ', ' + c.lng.toFixed(5);
+            });
+            this._pickerMap.on('moveend', () => {
+                const c = this._pickerMap.getCenter();
+                this._pickerTempLocation = { lat: c.lat, lng: c.lng };
+            });
+        } else {
+            setTimeout(() => this._pickerMap.invalidateSize(), 100);
+        }
+        const c = this._pickerMap.getCenter();
+        const el = document.getElementById('location-picker-coords');
+        if (el) el.textContent = c.lat.toFixed(5) + ', ' + c.lng.toFixed(5);
+        this._pickerTempLocation = { lat: c.lat, lng: c.lng };
+    },
+
+    closeLocationPicker() {
+        const modal = document.getElementById('locationPickerModal');
+        if (!modal) return;
+        modal.classList.add('pointer-events-none', 'opacity-0');
+        modal.classList.remove('opacity-100', 'pointer-events-auto');
+    },
+
+    moveObsOnMap(obsId) {
+        const obs = this.app.state.observations.find(o => o.id === obsId);
+        if (!obs) return;
+        this.closeObsDetail();
+        this.openPanel('map');
+        if (obs.lat && obs.lng) {
+            this.app.map.map.flyTo([obs.lat, obs.lng], 16, { duration: 0.8 });
+        }
+        this.app.journal._moveObsId = obsId;
+        setTimeout(() => {
+            if (obs.lat && obs.lng && this._pickerMap) {
+                this._pickerMap.setView([obs.lat, obs.lng], 16);
+            }
+            this.openLocationPicker();
+        }, 600);
     },
 
     toggleLayerPicker() {
