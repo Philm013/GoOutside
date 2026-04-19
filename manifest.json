@@ -1,0 +1,62 @@
+{
+    "name": "Earth Day Everyday",
+    "short_name": "EDE",
+    "description": "Explore, identify, and celebrate the nature around you — every day.",
+    "start_url": "/GoOutside/",
+    "scope": "/GoOutside/",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "background_color": "#2d6a4f",
+    "theme_color": "#2d6a4f",
+    "lang": "en",
+    "categories": ["education", "lifestyle", "utilities"],
+    "icons": [
+        {
+            "src": "/GoOutside/icons/favicon-32.png",
+            "sizes": "32x32",
+            "type": "image/png"
+        },
+        {
+            "src": "/GoOutside/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/GoOutside/icons/icon-192-maskable.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/GoOutside/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/GoOutside/icons/icon-512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Identify Species",
+            "short_name": "Identify",
+            "description": "Open the identification tool",
+            "url": "/GoOutside/?panel=identify",
+            "icons": [{ "src": "/GoOutside/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "My Journal",
+            "short_name": "Journal",
+            "description": "View your nature journal",
+            "url": "/GoOutside/?panel=journal",
+            "icons": [{ "src": "/GoOutside/icons/icon-192.png", "sizes": "192x192" }]
+        }
+    ],
+    "prefer_related_applications": false
+}

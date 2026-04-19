@@ -1,11 +1,11 @@
-import { haptics } from './haptics.js?v=20260419c';
-import { hud } from './hud.js?v=20260419c';
-import { ui } from './ui.js?v=20260419c';
-import { data } from './data.js?v=20260419c';
-import { map } from './map.js?v=20260419c';
-import { inat } from './inat.js?v=20260419c';
-import { identify } from './identify.js?v=20260419c';
-import { journal } from './journal.js?v=20260419c';
+import { haptics } from './haptics.js?v=20260419d';
+import { hud } from './hud.js?v=20260419d';
+import { ui } from './ui.js?v=20260419d';
+import { data } from './data.js?v=20260419d';
+import { map } from './map.js?v=20260419d';
+import { inat } from './inat.js?v=20260419d';
+import { identify } from './identify.js?v=20260419d';
+import { journal } from './journal.js?v=20260419d';
 
 const app = {
     state: {},
@@ -105,7 +105,13 @@ const app = {
         const ls = document.getElementById('loading-screen');
         if (ls) {
             ls.classList.add('loading-out');
-            ls.addEventListener('animationend', () => ls.remove(), { once: true });
+            ls.addEventListener('animationend', () => {
+                ls.remove();
+                // Handle PWA shortcut deep links (?panel=identify etc.)
+                const params = new URLSearchParams(window.location.search);
+                const panel  = params.get('panel');
+                if (panel && this.ui) this.ui.openPanel(`panel-${panel}`);
+            }, { once: true });
         }
     },
 
@@ -179,6 +185,26 @@ window.onload = () => {
         });
         obs.observe(document.body, { childList: true });
     }
+
+    // ── Register Service Worker ────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/GoOutside/sw.js', { scope: '/GoOutside/' })
+            .then((reg) => {
+                // When a new SW is waiting, activate it on next navigation
+                reg.addEventListener('updatefound', () => {
+                    const newSW = reg.installing;
+                    if (!newSW) return;
+                    newSW.addEventListener('statechange', () => {
+                        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New version available — could show a toast here
+                            console.log('[SW] Update available — will activate on next load.');
+                        }
+                    });
+                });
+            })
+            .catch((err) => console.warn('[SW] Registration failed:', err));
+    }
+
     app.init();
 };
 export default app;
