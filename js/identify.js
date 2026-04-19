@@ -481,31 +481,40 @@ export const identify = {
             return;
         }
 
+        const hasTarget = !!(this.app.ui && this.app.ui.selectorTarget);
         body.innerHTML = `
             <div class="mb-4">
                 <div class="text-xs font-bold uppercase tracking-widest text-brand mb-1">Possible Matches Nearby</div>
                 <h3 class="text-lg font-black text-gray-900 dark:text-white">${this.kgResults.length} candidate${this.kgResults.length !== 1 ? 's' : ''} found</h3>
-                <p class="text-xs text-gray-400 mt-1">Based on your selections + current location. Tap to view details.</p>
+                <p class="text-xs text-gray-400 mt-1">Based on your selections + current location. ${hasTarget ? 'Tap <strong>Use</strong> to log this species.' : 'Tap to view details.'}</p>
             </div>
             <div class="space-y-3">
-                ${this.kgResults.map((s, i) => `
-                    <button onclick="app.ui.openSpeciesDetail(${s.id})"
-                        class="w-full flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 active:scale-98 transition-all text-left">
-                        <div class="relative shrink-0">
-                            <img src="${s.squareImg || s.img}" class="w-16 h-16 rounded-xl object-cover" loading="lazy">
-                            ${i === 0 ? '<div class="absolute -top-1 -right-1 w-5 h-5 bg-brand rounded-full flex items-center justify-center"><span class="text-white text-[10px] font-black">1</span></div>' : ''}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-sm text-gray-900 dark:text-white truncate">${s.name}</div>
-                            <div class="text-xs text-gray-400 italic truncate">${s.sciName}</div>
-                            <div class="flex items-center gap-2 mt-1">
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${s.rarity === 'Common' ? 'bg-green-100 text-green-700' : s.rarity === 'Uncommon' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}">${s.rarity}</span>
-                                <span class="text-[10px] text-gray-400">${s.count} local obs</span>
+                ${this.kgResults.map((s, i) => {
+                    const nameEsc = (s.name || '').replace(/'/g, "\\'");
+                    const sciEsc  = (s.sciName || '').replace(/'/g, "\\'");
+                    const useBtn  = hasTarget
+                        ? `<button onclick="app.ui._selectSpeciesFromiNat(${s.id}, '${nameEsc}', '${sciEsc}')"
+                               class="px-3 py-1.5 bg-brand text-white text-xs font-bold rounded-xl active:scale-95 shrink-0">Use</button>`
+                        : `<span class="material-symbols-rounded text-gray-400 text-xl shrink-0">chevron_right</span>`;
+                    return `
+                    <div class="w-full flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <button onclick="app.ui.openSpeciesDetail(${s.id})" class="flex items-center gap-3 flex-1 min-w-0 text-left">
+                            <div class="relative shrink-0">
+                                <img src="${s.squareImg || s.img}" class="w-16 h-16 rounded-xl object-cover" loading="lazy">
+                                ${i === 0 ? '<div class="absolute -top-1 -right-1 w-5 h-5 bg-brand rounded-full flex items-center justify-center"><span class="text-white text-[10px] font-black">1</span></div>' : ''}
                             </div>
-                        </div>
-                        <span class="material-symbols-rounded text-gray-400 text-xl shrink-0">chevron_right</span>
-                    </button>
-                `).join('')}
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-sm text-gray-900 dark:text-white truncate">${s.name}</div>
+                                <div class="text-xs text-gray-400 italic truncate">${s.sciName}</div>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${s.rarity === 'Common' ? 'bg-green-100 text-green-700' : s.rarity === 'Uncommon' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}">${s.rarity}</span>
+                                    <span class="text-[10px] text-gray-400">${s.count} local obs</span>
+                                </div>
+                            </div>
+                        </button>
+                        ${useBtn}
+                    </div>`;
+                }).join('')}
             </div>
             <button onclick="app.ui.closeKGModal()" class="w-full mt-4 py-3 bg-brand text-white font-bold rounded-xl active:scale-95">Done</button>`;
     },
@@ -758,24 +767,33 @@ export const identify = {
         if (!el) return;
         if (!this._liveDetections.length) return;
 
+        const hasTarget = !!(this.app.ui && this.app.ui.selectorTarget);
+
         el.innerHTML = this._liveDetections.map(r => {
             const conf = Math.min(100, Math.round(r.confidence * 100));
             const confColor = conf > 70 ? 'text-green-600' : conf > 40 ? 'text-amber-500' : 'text-gray-400';
             const barColor = conf > 70 ? 'bg-green-500' : conf > 40 ? 'bg-amber-400' : 'bg-gray-400';
             const sciEsc = r.scientificName.replace(/'/g, "\\'");
+            const nameEsc = r.commonName.replace(/'/g, "\\'");
+            const useBtn = hasTarget
+                ? `<button onclick="app.ui._selectSpeciesFromiNat('', '${nameEsc}', '${sciEsc}')"
+                       class="ml-1 px-3 py-1.5 bg-brand text-white text-xs font-bold rounded-xl active:scale-95 shrink-0">Use</button>`
+                : '';
             return `
-                <button onclick="app.ui.openSpeciesDetailByName('${sciEsc}')"
-                    class="w-full flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 active:scale-98 text-left transition-all">
-                    <div class="text-2xl shrink-0">🐦</div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-bold text-sm text-gray-900 dark:text-white truncate">${r.commonName}</div>
-                        <div class="text-xs text-gray-400 italic truncate">${r.scientificName}</div>
-                        <div class="mt-1.5 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full ${barColor} rounded-full transition-all duration-500" style="width:${conf}%"></div>
+                <div class="w-full flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <button onclick="app.ui.openSpeciesDetailByName('${sciEsc}')" class="flex items-center gap-3 flex-1 min-w-0 text-left">
+                        <div class="text-2xl shrink-0">🐦</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-sm text-gray-900 dark:text-white truncate">${r.commonName}</div>
+                            <div class="text-xs text-gray-400 italic truncate">${r.scientificName}</div>
+                            <div class="mt-1.5 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full ${barColor} rounded-full transition-all duration-500" style="width:${conf}%"></div>
+                            </div>
                         </div>
-                    </div>
-                    <span class="text-sm font-black ${confColor} shrink-0 tabular-nums">${conf}%</span>
-                </button>`;
+                        <span class="text-sm font-black ${confColor} tabular-nums">${conf}%</span>
+                    </button>
+                    ${useBtn}
+                </div>`;
         }).join('');
     },
 

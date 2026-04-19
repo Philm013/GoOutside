@@ -1,11 +1,11 @@
-import { haptics } from './haptics.js?v=20260419f';
-import { hud } from './hud.js?v=20260419f';
-import { ui } from './ui.js?v=20260419f';
-import { data } from './data.js?v=20260419f';
-import { map } from './map.js?v=20260419f';
-import { inat } from './inat.js?v=20260419f';
-import { identify } from './identify.js?v=20260419f';
-import { journal } from './journal.js?v=20260419f';
+import { haptics } from './haptics.js?v=20260419g';
+import { hud } from './hud.js?v=20260419g';
+import { ui } from './ui.js?v=20260419g';
+import { data } from './data.js?v=20260419g';
+import { map } from './map.js?v=20260419g';
+import { inat } from './inat.js?v=20260419g';
+import { identify } from './identify.js?v=20260419g';
+import { journal } from './journal.js?v=20260419g';
 
 const app = {
     state: {},

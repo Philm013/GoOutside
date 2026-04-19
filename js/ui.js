@@ -464,6 +464,8 @@ export const ui = {
     openSpeciesSelector(targetBtn) {
         this.selectorTarget = targetBtn;
         this.selectorActiveFilter = 'all';
+        const search = document.getElementById('species-selector-search');
+        if (search) search.value = '';
         this._renderSpeciesSelectorTabs();
         this._renderSpeciesSelectorBody();
         const modal = document.getElementById('species-select-modal');
@@ -481,6 +483,59 @@ export const ui = {
         modal.classList.add('opacity-0');
         if (content) content.classList.add('translate-y-full');
         setTimeout(() => modal.classList.add('pointer-events-none', 'hidden'), 320);
+    },
+
+    // ── Identify-first shortcuts from species selector ────────────
+    _selectorToAudioId() {
+        // Keep selectorTarget so BirdNET can callback on result
+        this.openAudioId();
+    },
+    _selectorToKG() {
+        // Keep selectorTarget so KG wizard can callback on result
+        this.openKGModal();
+    },
+    _selectorToNearby() {
+        // Populate selector from nearby observations
+        const nearby = this.app._preloadedObs || [];
+        const el = document.getElementById('species-selector-body');
+        if (!el) return;
+        if (!nearby.length) {
+            el.innerHTML = '<div class="text-center py-8 text-gray-400"><p class="text-sm">No nearby sightings loaded yet</p></div>';
+            return;
+        }
+        const unique = [];
+        const seen = new Set();
+        nearby.forEach(obs => {
+            const id = obs.taxon?.id;
+            if (id && !seen.has(id)) { seen.add(id); unique.push(obs); }
+        });
+        el.innerHTML = unique.slice(0, 20).map(obs => {
+            const name = obs.taxon?.preferred_common_name || obs.taxon?.name || 'Unknown';
+            const sciName = obs.taxon?.name || '';
+            const id = obs.taxon?.id;
+            const imgUrl = obs.taxon?.default_photo?.square_url || '';
+            const emoji = this.app.inat.iconicEmoji(obs.taxon?.iconic_taxon_name);
+            return '<button onclick="app.ui._selectSpeciesFromiNat(' + id + ', ' + JSON.stringify(name) + ', ' + JSON.stringify(sciName) + ')" ' +
+                'class="w-full flex items-center gap-3 p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-gray-100 dark:border-gray-700 active:scale-98 transition-all">' +
+                (imgUrl ? '<img src="' + imgUrl + '" class="w-12 h-12 rounded-xl object-cover shrink-0" loading="lazy">'
+                        : '<div class="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-2xl shrink-0">' + emoji + '</div>') +
+                '<div class="flex-1 min-w-0 text-left"><div class="font-bold text-sm text-gray-900 dark:text-white truncate">' + name + '</div>' +
+                '<div class="text-xs text-gray-400 italic truncate">' + sciName + '</div></div>' +
+                '</button>';
+        }).join('');
+    },
+
+    // Called by BirdNET / KG to push a result into the active log form
+    _selectSpeciesFromiNat(taxonId, commonName, sciName) {
+        if (!this.selectorTarget) return;
+        this.selectorTarget.textContent = commonName;
+        this.selectorTarget.dataset.id = taxonId || '';
+        this.selectorTarget.dataset.name = commonName;
+        this.selectorTarget.dataset.iconic = '';
+        this.closeSpeciesSelector();
+        // Close audio/KG modals if open
+        this.closeAudioId();
+        this.closeKGModal();
     },
 
     _renderSpeciesSelectorTabs() {
@@ -508,11 +563,19 @@ export const ui = {
         let species = this.app.localSpecies || [];
         if (this.selectorActiveFilter !== 'all') species = species.filter(s => s.iconic === this.selectorActiveFilter);
         if (q) species = species.filter(s => s.name.toLowerCase().includes(q) || (s.sciName || '').toLowerCase().includes(q));
-        if (!species.length) { el.innerHTML = '<div class="text-center py-8 text-gray-400"><p class="text-sm">No species found</p></div>'; return; }
+        if (!species.length) {
+            el.innerHTML = '<div class="text-center py-8 text-gray-400">' +
+                '<span class="material-symbols-rounded text-4xl block mb-2 opacity-40">search</span>' +
+                '<p class="text-sm">No species found</p>' +
+                '<p class="text-xs mt-1">Try the Identify tools above or clear your search</p></div>';
+            return;
+        }
         el.innerHTML = species.map(s => {
             const rc = s.rarity === 'Common' ? 'bg-green-100 text-green-700' : s.rarity === 'Uncommon' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
             return '<button onclick="app.ui._selectSpecies(' + s.id + ')" class="w-full flex items-center gap-3 p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-gray-100 dark:border-gray-700 active:scale-98 transition-all">' +
-                '<img src="' + (s.squareImg || s.img || '') + '" class="w-12 h-12 rounded-xl object-cover shrink-0" loading="lazy">' +
+                (s.squareImg || s.img
+                    ? '<img src="' + (s.squareImg || s.img) + '" class="w-12 h-12 rounded-xl object-cover shrink-0" loading="lazy">'
+                    : '<div class="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-2xl shrink-0">' + this.app.inat.iconicEmoji(s.iconic) + '</div>') +
                 '<div class="flex-1 min-w-0 text-left"><div class="font-bold text-sm text-gray-900 dark:text-white truncate">' + s.name + '</div>' +
                 '<div class="text-xs text-gray-400 italic truncate">' + (s.sciName || '') + '</div></div>' +
                 '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ' + rc + '">' + s.rarity + '</span></button>';
