@@ -191,11 +191,28 @@ export const map = {
                 const lat = o.location?.split(',')[0];
                 const lng = o.location?.split(',')[1];
                 if (!lat || !lng) return;
-                const emoji = this.app.inat.iconicEmoji(iconicTaxonName);
-                const name = o.taxon?.preferred_common_name || o.taxon?.name || '?';
-                L.marker([parseFloat(lat), parseFloat(lng)], {
-                    icon: L.divIcon({ className: '', html: '<div class="map-obs-dot" style="font-size:18px">' + emoji + '</div>', iconSize: [28, 28], iconAnchor: [14, 14] })
-                }).bindPopup('<b>' + name + '</b>').addTo(layer);
+                const taxonId = o.taxon?.id;
+                const name = o.taxon?.preferred_common_name || o.taxon?.name || "Unknown";
+                const photo = o.photos?.[0]?.url?.replace("square", "small");
+                const squarePhoto = o.taxon?.default_photo?.square_url || o.photos?.[0]?.url || '';
+                const emoji = this.app.inat.iconicEmoji(o.taxon?.iconic_taxon_name || iconicTaxonName);
+                const imgHtml = photo ? "<img src=" + JSON.stringify(photo) + " class=\"com-pin-img\">" : "<div class=\"com-pin-emoji\">" + emoji + "</div>";
+                const icon = L.divIcon({
+                    className: "bg-transparent",
+                    html: "<div class=\"community-obs-pin\">" + imgHtml + "</div>",
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18]
+                });
+                const marker = L.marker([parseFloat(lat), parseFloat(lng)], { icon }).addTo(layer);
+                const popupHtml = "<div class='com-popup'>" +
+                    (squarePhoto ? "<img src='" + squarePhoto + "' class='com-popup-img'>" : "<div class='com-popup-emoji'>" + emoji + "</div>") +
+                    "<div class='com-popup-body'>" +
+                    "<div class='com-popup-name'>" + name + "</div>" +
+                    "<div class='com-popup-meta'>" + (o.place_guess || "Nearby") + " · " + (o.observed_on || "") + "</div>" +
+                    (o.user?.login ? "<div class='com-popup-by'>@" + o.user.login + "</div>" : "") +
+                    (taxonId ? "<button onclick=\"app.ui.openSpeciesDetail(" + taxonId + ");\" class='com-popup-btn'>View Species ›</button>" : "") +
+                    "</div></div>";
+                marker.bindPopup(popupHtml, { maxWidth: 240, className: 'ede-popup' });
             });
             this._iconicLayers[layerId] = layer;
             layer.addTo(this.map);
