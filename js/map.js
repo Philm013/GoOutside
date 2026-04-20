@@ -98,7 +98,7 @@ export const map = {
     },
 
     _createCommunityMarker(o, targetLayer = this.communityLayer) {
-        const [lat, lng] = String(o.location || '').split(",").map(v => parseFloat(v));
+        const [lat, lng] = (o.location || '').split(",").map(v => parseFloat(v));
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
         const taxonId = o.taxon?.id;
         const name = o.taxon?.preferred_common_name || o.taxon?.name || "Unknown";

@@ -278,7 +278,7 @@
                     <div class="id-tool-icon">🐟</div>
                     <div class="flex-1 min-w-0">
                         <div class="id-tool-title">Identify Fish</div>
-                        <div class="id-tool-desc">Trait-based fish identification using your local sightings context</div>
+                        <div class="id-tool-desc">Trait-based Fish identification using your local sightings context</div>
                     </div>
                 </button>
                 <button onclick="app.ui.openKGModal('Mollusca')"
@@ -286,7 +286,7 @@
                     <div class="id-tool-icon">🐚</div>
                     <div class="flex-1 min-w-0">
                         <div class="id-tool-title">Identify Shells &amp; Mollusks</div>
-                        <div class="id-tool-desc">Guided shell and mollusk matching based on habitat and form</div>
+                        <div class="id-tool-desc">Guided shell and mollusk identification based on habitat and form</div>
                     </div>
                 </button>
                 <button onclick="app.ui.openLogObservation()"
@@ -443,7 +443,7 @@
                     <input id="toggle-personal-layer" data-layer-toggle="personal" type="checkbox" checked onchange="app.map.togglePersonalLayer(this.checked)" class="w-5 h-5 accent-brand">
                 </label>
                 <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-3 mb-1">Filter Community by Type</div>
-                <p class="text-[11px] text-gray-500 mb-2">Type filters use the same nearby community sightings dataset for better consistency.</p>
+                <p class="text-[11px] text-gray-500 mb-2">Type filters are applied to the same nearby community sightings shown on the map, ensuring consistent data across views.</p>
                 <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐦 Birds</span><input data-iconic-layer="Aves" type="checkbox" onchange="app.map.toggleIconicLayer('Aves',this.checked)" class="w-5 h-5 accent-brand"></label>
                 <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🌿 Plants</span><input data-iconic-layer="Plantae" type="checkbox" onchange="app.map.toggleIconicLayer('Plantae',this.checked)" class="w-5 h-5 accent-brand"></label>
                 <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦊 Mammals</span><input data-iconic-layer="Mammalia" type="checkbox" onchange="app.map.toggleIconicLayer('Mammalia',this.checked)" class="w-5 h-5 accent-brand"></label>
@@ -462,7 +462,7 @@
         </div>
     </div>
 
-    <!-- 6. SPECIES DETAIL -->
+    <!-- 6. ABOUT -->
     <div id="panel-about" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
         <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
             <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">About Earth Day Everyday</h2>
@@ -493,7 +493,7 @@
         </div>
     </div>
 
-    <!-- 6. SPECIES DETAIL -->
+    <!-- 7. SPECIES DETAIL -->
     <div id="panel-species-detail" class="fixed inset-0 z-40 bg-surface-light dark:bg-surface-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
         <div class="absolute top-3 left-3 z-20">
             <button onclick="app.ui.closeSpeciesDetail()" class="w-10 h-10 bg-white/90 dark:bg-black/50 backdrop-blur rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform">
