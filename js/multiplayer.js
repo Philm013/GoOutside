@@ -8,6 +8,7 @@ export const multiplayer = {
             this.peer.on('open', () => {
                 const el = document.getElementById('my-peer-id');
                 if (el) el.innerText = this.myId;
+                this._posInterval = setInterval(() => this.broadcastPos(), 5000);
             });
             this.peer.on('connection', conn => this.handleConn(conn));
         }
@@ -27,10 +28,14 @@ export const multiplayer = {
         const conn = this.peer.connect(`NQ24-${code}`);
         conn.on('open', () => {
             this.hostConnection = conn;
+            this.app.state._joinedParty = true;
+            this.app.data.checkBadges(this.app.state);
+            this.app.saveState();
             if (this.app.ui) {
                 this.app.ui.showToast("Connected!");
                 this.updateUI();
             }
+            this._posInterval = setInterval(() => this.broadcastPos(), 5000);
             this.broadcastPos();
         });
         conn.on('data', d => this.handleData(d));
@@ -42,6 +47,8 @@ export const multiplayer = {
         });
     },
     disconnect() {
+        clearInterval(this._posInterval);
+        this._posInterval = null;
         if (this.hostConnection) this.hostConnection.close();
         this.connections.forEach(c => c.close());
         this.hostConnection = null;
@@ -86,11 +93,13 @@ export const multiplayer = {
                 }
                 this.app.saveState();
             }
+        } else if (d.type === 'JOURNAL_SHARE') {
+            if (this.app.ui) {
+                this.app.ui.showToast(`${d.payload.username} shared a journal entry!`);
+                this.addToFeed({ type: 'journal', user: d.payload.username, item: d.payload.obs?.speciesName || 'observation', icon: 'menu_book' });
+            }
         } else if (d.type === 'MSG') {
             if (this.app.ui) this.app.ui.showToast(`HOST: ${d.payload}`);
-        } else if (d.type === 'LURE') {
-            if (this.app.map) this.app.map.spawnLure(d.payload.lat, d.payload.lng);
-            if (this.app.ui) this.app.ui.showToast(`A Party Lure was dropped nearby!`);
         }
     },
     broadcast(d, exclude) {
@@ -200,27 +209,30 @@ export const multiplayer = {
         `).join('');
     },
     sendGift(toId, type) {
-        if (this.app.state.seeds < 10) {
-            this.app.ui.showToast("Need 🌰 10 to send a gift!");
-            return;
-        }
-        this.app.state.seeds -= 10;
-        this.app.ui.renderProfile();
-        this.app.saveState();
-        
         const payload = { 
             from: this.app.state.username, 
             giftType: type, 
-            giftName: type === 'seeds' ? '10 Seeds' : 'Mystery Lure',
+            giftName: type === 'seeds' ? 'Nature Gift' : 'Mystery Gift',
             amount: 10
         };
         
         const d = { type: 'GIFT', payload };
         const conn = this.connections.find(c => c.peer === toId) || this.hostConnection;
         if (conn) conn.send(d);
+
+        this.app.state._sentGift = true;
+        this.app.data.checkBadges(this.app.state);
+        this.app.saveState();
         
-        this.app.ui.showToast(`Gift sent! 🎁`);
-        this.addToFeed({ type: 'gift', user: 'You', item: payload.giftName, icon: 'card_giftcard' });
+        if (this.app.ui) {
+            this.app.ui.showToast(`Gift sent! 🎁`);
+            this.addToFeed({ type: 'gift', user: 'You', item: payload.giftName, icon: 'card_giftcard' });
+        }
+    },
+    broadcastJournalShare(obs) {
+        const d = { type: 'JOURNAL_SHARE', payload: { username: this.app.state.username, obs } };
+        if (this.hostConnection) this.hostConnection.send(d);
+        else this.broadcast(d);
     },
     updateAdminTable() {
         const tbody = document.getElementById('admin-players-table');
@@ -237,19 +249,5 @@ export const multiplayer = {
                 <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Active</span></td>
             </tr>
         `).join('');
-    },
-    spawnPartyLure() {
-        if (!this.app.map.pos.lat) return;
-        const payload = { lat: this.app.map.pos.lat, lng: this.app.map.pos.lng };
-        this.broadcast({ type: 'LURE', payload });
-        if (this.app.map) this.app.map.spawnLure(payload.lat, payload.lng);
-        if (this.app.ui) this.app.ui.showToast("Party Lure Dropped!");
-    },
-    broadcastMessagePrompt() {
-        const msg = prompt("Enter announcement message:");
-        if (msg) {
-            this.broadcast({ type: 'MSG', payload: msg });
-            if (this.app.ui) this.app.ui.showToast(`Sent: ${msg}`);
-        }
     }
 };

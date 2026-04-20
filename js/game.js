@@ -78,11 +78,18 @@ export const game = {
             return;
         }
 
-        const species = this.app.data.getSpecies(this.app, speciesId);
-        if (!species) {
-            this.app.ui.showToast('Species data unavailable. Please try again.');
-            return;
-        }
+        // Build species object from dataset + localSpecies lookup
+        const speciesName = subjectBtn.dataset.name || speciesId;
+        const iconic = subjectBtn.dataset.iconic || '';
+        const localMatch = (this.app.localSpecies || []).find(s => String(s.id) === String(speciesId));
+        const species = {
+            id: speciesId,
+            name: speciesName,
+            sciName: localMatch?.sciName || subjectBtn.dataset.sciname || '',
+            iconic: localMatch?.iconic || iconic,
+            rarity: localMatch?.rarity || 'Common',
+            dp: localMatch?.dp || 50
+        };
 
         const qty = Math.max(parseInt(countInput?.value || '1', 10), 1);
         const notes = (notesInput?.value || '').trim();
@@ -91,20 +98,32 @@ export const game = {
         const lat = this.app.map.pos.lat || null;
         const lng = this.app.map.pos.lng || null;
 
-        const xp = Math.round(species.xp * qty * 1.2);
-        const seeds = Math.round(species.seeds * qty * 1.4);
+        const s = this.app.state;
+        this.app.data.updateStreak(s);
+        const dp = this.app.data.calcObservationDP(species, s);
 
-        if (!this.app.state.speciesData[speciesId]) {
-            this.app.state.speciesData[speciesId] = { count: 0, level: 1, xp: 0 };
+        // Update catalogue
+        if (!s.catalogue[speciesId]) {
+            s.catalogue[speciesId] = {
+                name: species.name,
+                sciName: species.sciName,
+                iconic: species.iconic,
+                count: 0,
+                firstSeen: new Date().toISOString()
+            };
         }
-        this.app.state.speciesData[speciesId].count += qty;
+        s.catalogue[speciesId].count += qty;
+        s.catalogue[speciesId].name = species.name;
+        s.catalogue[speciesId].sciName = species.sciName;
+        s.catalogue[speciesId].iconic = species.iconic;
 
         const entry = {
             id: `log_${Date.now()}`,
             timestamp: new Date().toISOString(),
             speciesId,
             speciesName: species.name,
-            category: species.category,
+            sciName: species.sciName,
+            iconic: species.iconic,
             qty,
             notes,
             habitat,
@@ -112,18 +131,17 @@ export const game = {
             imageUri: this.currentSightingImage,
             lat,
             lng,
-            xp,
-            seeds
+            dp,
+            rarity: species.rarity
         };
 
-        this.app.state.sightingsLog.unshift(entry);
-        this.app.state.sightingsLog = this.app.state.sightingsLog.slice(0, 250);
-        
-        this.app.state.xp += xp;
-        this.app.state.seeds += seeds;
-        this.app.state.quests.daily.progress += 1;
+        s.observations.unshift(entry);
+        s.observations = s.observations.slice(0, 500);
+        s.discoveryPoints += dp;
+
+        const newBadges = this.app.data.checkBadges(s);
         this.app.saveState();
-        
+
         if (this.app.map && this.app.map.addPersonalSighting) {
             this.app.map.addPersonalSighting(entry);
         }
@@ -134,16 +152,21 @@ export const game = {
                 lng: this.app.map.pos.lng,
                 speciesId,
                 speciesName: species.name,
-                username: this.app.state.username
+                username: s.username
             });
+            s._sharedSighting = true;
         }
-        
+
         if (this.app.ui) {
             this.app.ui.renderProfile();
-            this.app.ui.renderInventory();
-            this.app.ui.closeLogSighting();
-            this.app.ui.showLogged(species, xp, seeds, species.name, this.currentSightingImage);
+            this.app.ui.closeLogObservation();
+            this.app.ui.showObsSuccess(entry, newBadges);
+            for (const badge of newBadges) {
+                this.app.ui.showBadgeUnlock(badge);
+            }
             this.currentSightingImage = null;
         }
+
+        this.app.hud.renderHUDStats();
     }
 };

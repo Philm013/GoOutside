@@ -1,16 +1,17 @@
-import { haptics } from './haptics.js?v=20260420c';
-import { hud } from './hud.js?v=20260420c';
-import { ui } from './ui.js?v=20260420c';
-import { data } from './data.js?v=20260420c';
-import { map } from './map.js?v=20260420c';
-import { inat } from './inat.js?v=20260420c';
-import { identify } from './identify.js?v=20260420c';
-import { journal } from './journal.js?v=20260420c';
+import { haptics } from './haptics.js?v=20260420d';
+import { hud } from './hud.js?v=20260420d';
+import { ui } from './ui.js?v=20260420d';
+import { data } from './data.js?v=20260420d';
+import { map } from './map.js?v=20260420d';
+import { inat } from './inat.js?v=20260420d';
+import { identify } from './identify.js?v=20260420d';
+import { journal } from './journal.js?v=20260420d';
+import { multiplayer } from './multiplayer.js?v=20260420d';
 
 const app = {
     state: {},
     localSpecies: [],
-    haptics, hud, ui, data, map, inat, identify, journal,
+    haptics, hud, ui, data, map, inat, identify, journal, multiplayer,
 
     async init() {
         const startedAt = Date.now();
@@ -39,6 +40,7 @@ const app = {
         this.map.init(this);
         this.identify.init(this);
         this.journal.init(this);
+        this.multiplayer.init(this);
 
         document.getElementById('journal-search')?.addEventListener('input', () => {
             this.journal._renderTimeline();

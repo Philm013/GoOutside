@@ -405,6 +405,13 @@
                 <h3 class="text-sm font-bold text-gray-800 dark:text-white mb-3">My Wildlife Breakdown</h3>
                 <div id="taxa-breakdown" class="space-y-2"></div>
             </div>
+
+            <!-- Party button -->
+            <div class="px-4 mb-6">
+                <button onclick="app.ui.openPanel('panel-party')" class="w-full bg-brand text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 shadow-md">
+                    <span class="material-symbols-rounded">group</span> Explore Together
+                </button>
+            </div>
         </div>
     </div>
 
@@ -440,6 +447,66 @@
             <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
                 <h3 class="font-bold text-sm text-red-600 mb-3">⚠️ Data</h3>
                 <button onclick="app.ui.confirmClearData()" class="w-full bg-red-50 dark:bg-red-900/20 text-red-600 py-2.5 rounded-xl font-bold text-sm active:scale-95 border border-red-200 dark:border-red-800">Clear All Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PARTY -->
+    <div id="panel-party" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">🌿 Explore Together</h2>
+            <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-nav">
+            <!-- My code -->
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Your Explorer Code</div>
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 text-center">
+                        <span id="my-peer-id" class="text-4xl font-black tracking-widest text-brand" style="font-family:Sora,sans-serif">????</span>
+                    </div>
+                    <button onclick="app.multiplayer.copyId()" class="w-12 h-12 bg-brand text-white rounded-2xl flex items-center justify-center active:scale-90 shadow-md">
+                        <span class="material-symbols-rounded">content_copy</span>
+                    </button>
+                </div>
+                <p class="text-xs text-gray-400 text-center mt-2">Share this code with friends to explore together</p>
+            </div>
+
+            <!-- Connection controls -->
+            <div id="host-controls">
+                <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Join a Party</div>
+                <div class="flex gap-2">
+                    <input id="target-peer-id" maxlength="4" placeholder="Enter code" 
+                        class="flex-1 text-center text-2xl font-black tracking-widest uppercase bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-2xl p-3 outline-none focus:border-brand dark:text-white">
+                    <button onclick="app.multiplayer.joinParty()" class="px-5 bg-brand text-white rounded-2xl font-bold active:scale-95 shadow-md">
+                        Join
+                    </button>
+                </div>
+            </div>
+
+            <div id="connected-controls" class="hidden">
+                <button onclick="app.multiplayer.disconnect()" class="w-full bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-200 dark:border-red-800 py-3 rounded-2xl font-bold active:scale-95">
+                    Leave Party
+                </button>
+            </div>
+
+            <!-- Friends list -->
+            <div>
+                <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Explorers Nearby</div>
+                <div id="friends-list">
+                    <div class="text-center text-gray-400 py-8 italic bg-gray-50 dark:bg-gray-800/50 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">Connect to see nearby explorers</div>
+                </div>
+            </div>
+
+            <!-- Social feed -->
+            <div>
+                <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Activity Feed</div>
+                <div id="social-feed" class="space-y-2">
+                    <div class="bg-white dark:bg-surface-dark p-4 rounded-2xl border border-gray-100 dark:border-gray-700 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center"><span class="material-symbols-rounded text-sm text-gray-400">rss_feed</span></div>
+                        <p class="text-xs text-gray-500 font-medium italic">No activity yet. Go find some nature!</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -804,6 +871,7 @@
      style="bottom: calc(var(--nav-h) + 8px)"></div>
 
 <!-- APP LOGIC -->
-<script type="module" src="js/app.js?v=20260420c"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script type="module" src="js/app.js?v=20260420d"></script>
 </body>
 </html>

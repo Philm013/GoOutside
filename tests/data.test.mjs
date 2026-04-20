@@ -62,9 +62,9 @@ describe('data.calcLevel()', () => {
         }
     });
 
-    test('very high DP caps title at Earth Steward (index 9)', () => {
-        const r = data.calcLevel(1_000_000);
-        assert.equal(r.title, 'Earth Steward');
+    test('very high DP caps title at Planet Protector (index 14)', () => {
+        const r = data.calcLevel(10_000_000);
+        assert.equal(r.title, 'Planet Protector');
     });
 });
 
@@ -172,8 +172,8 @@ describe('data.checkBadges()', () => {
         assert.ok(awarded.some(b => b.id === 'all_taxa'));
     });
 
-    test('all 16 badges defined', () => {
-        assert.equal(data.BADGES.length, 16);
+    test('all 34 badges defined', () => {
+        assert.equal(data.BADGES.length, 34);
     });
 });
 

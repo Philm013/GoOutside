@@ -968,6 +968,13 @@ export const ui = {
         }
     },
 
+    showBadgeUnlock(badge) {
+        const el = document.createElement('div');
+        el.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[200] bg-brand text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top duration-300';
+        el.innerHTML = `<span class="text-2xl">${badge.icon}</span><div><div class="font-black text-sm">Badge Unlocked!</div><div class="text-xs text-green-100">${badge.name}</div></div>`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+    },
     showToast(msg, duration) {
         duration = duration || 2500;
         const ctr = document.getElementById('toast-container');
