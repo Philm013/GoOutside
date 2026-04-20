@@ -23,7 +23,7 @@ describe('inat.iconicLabel()', () => {
     }
 
     test('unknown taxon returns the taxon name itself', () => {
-        assert.equal(inat.iconicLabel('Chromista'), 'Chromista');
+        assert.equal(inat.iconicLabel('UnknownThing'), 'UnknownThing');
     });
 
     test('null/undefined returns Wildlife', () => {
@@ -43,7 +43,7 @@ describe('inat.iconicEmoji()', () => {
         ['Arachnida', '🕷️'],
         ['Fungi', '🍄'],
         ['Actinopterygii', '🐟'],
-        ['Mollusca', '🐌'],
+        ['Mollusca', '🐚'],
         ['Animalia', '🐾'],
     ];
     for (const [iconic, expected] of cases) {
@@ -53,7 +53,7 @@ describe('inat.iconicEmoji()', () => {
     }
 
     test('unknown taxon returns globe emoji', () => {
-        assert.equal(inat.iconicEmoji('Chromista'), '🌍');
+        assert.equal(inat.iconicEmoji('UnknownThing'), '🌍');
     });
 
     test('null/undefined returns globe emoji', () => {

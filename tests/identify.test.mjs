@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { identify } from '../js/identify.js';
 
 describe('identify.TRAIT_TREES structure', () => {
-    const EXPECTED_CATEGORIES = ['Aves', 'Plantae', 'Mammalia', 'Insecta', 'Reptilia', 'Amphibia'];
+    const EXPECTED_CATEGORIES = ['Aves', 'Plantae', 'Mammalia', 'Insecta', 'Reptilia', 'Amphibia', 'Actinopterygii', 'Mollusca'];
 
-    test('has exactly 6 categories', () => {
-        assert.equal(Object.keys(identify.TRAIT_TREES).length, 6);
+    test('has exactly 8 categories', () => {
+        assert.equal(Object.keys(identify.TRAIT_TREES).length, 8);
     });
 
     test('contains all required categories', () => {

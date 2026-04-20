@@ -170,6 +170,38 @@ export const map = {
         if (cbQuick) cbQuick.checked = on;
     },
 
+    async toggleIconicLayer(iconicTaxonName, on) {
+        const layerId = 'iconic_' + iconicTaxonName;
+        if (on) {
+            if (this._iconicLayers?.[layerId]) {
+                this._iconicLayers[layerId].addTo(this.map);
+                return;
+            }
+            if (!this.app.inat || !this.pos.lat) return;
+            this._iconicLayers = this._iconicLayers || {};
+            const obs = await this.app.inat.nearbyObservations(this.pos.lat, this.pos.lng, {
+                iconic: iconicTaxonName, perPage: 50
+            });
+            const layer = L.layerGroup();
+            (obs || []).forEach(o => {
+                const lat = o.location?.split(',')[0];
+                const lng = o.location?.split(',')[1];
+                if (!lat || !lng) return;
+                const emoji = this.app.inat.iconicEmoji(iconicTaxonName);
+                const name = o.taxon?.preferred_common_name || o.taxon?.name || '?';
+                L.marker([parseFloat(lat), parseFloat(lng)], {
+                    icon: L.divIcon({ className: '', html: '<div class="map-obs-dot" style="font-size:18px">' + emoji + '</div>', iconSize: [28, 28], iconAnchor: [14, 14] })
+                }).bindPopup('<b>' + name + '</b>').addTo(layer);
+            });
+            this._iconicLayers[layerId] = layer;
+            layer.addTo(this.map);
+        } else {
+            if (this._iconicLayers?.[layerId]) {
+                this.map.removeLayer(this._iconicLayers[layerId]);
+            }
+        }
+    },
+
     recenter() {
         if (this.pos.lat) {
             this.map.setView([this.pos.lat, this.pos.lng], 16);

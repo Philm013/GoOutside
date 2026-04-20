@@ -271,6 +271,100 @@ export const identify = {
                     ]
                 }
             ]
+        },
+        Actinopterygii: {
+            label: 'Fish', icon: '🐟',
+            steps: [
+                {
+                    id: 'water_type', question: 'What type of water?',
+                    options: [
+                        { id: 'freshwater_still', label: 'Lake / Pond',       icon: '🏞️', q: 'lake pond bass sunfish perch' },
+                        { id: 'freshwater_flow',  label: 'Stream / River',    icon: '🌊', q: 'stream river trout salmon dace' },
+                        { id: 'saltwater_coast',  label: 'Ocean / Coast',     icon: '🌊', q: 'ocean saltwater reef rockfish' },
+                        { id: 'brackish',         label: 'Estuary / Marsh',   icon: '🌿', q: 'estuary brackish striped bass' },
+                        { id: 'tidepool',         label: 'Tide Pool',         icon: '🪸', q: 'tidepool intertidal sculpin' }
+                    ]
+                },
+                {
+                    id: 'body_shape', question: 'What does the body look like?',
+                    options: [
+                        { id: 'deep_bodied',  label: 'Deep-bodied / Disc', icon: '⚪', q: 'sunfish bluegill crappie angelfish' },
+                        { id: 'elongated',    label: 'Elongated / Torpedo', icon: '➡️', q: 'trout salmon pike minnow dace' },
+                        { id: 'flat',         label: 'Flat / Pancake',     icon: '🫓', q: 'flounder halibut flatfish ray skate' },
+                        { id: 'eel_like',     label: 'Eel-like / Long',    icon: '〰️', q: 'eel lamprey pipefish' },
+                        { id: 'round_blunt',  label: 'Round / Blunt head', icon: '🐡', q: 'puffer sculpin bullhead catfish' }
+                    ]
+                },
+                {
+                    id: 'features', question: 'Any distinctive features?', multi: true,
+                    options: [
+                        { id: 'spiny_dorsal',  label: 'Spiny dorsal fin',     icon: '🌵', q: 'bass perch rockfish' },
+                        { id: 'adipose_fin',   label: 'Small adipose fin',    icon: '💧', q: 'trout salmon char' },
+                        { id: 'whiskers',      label: 'Whiskers / Barbels',   icon: '🐱', q: 'catfish bullhead sucker carp' },
+                        { id: 'forked_tail',   label: 'Deeply forked tail',   icon: '✌️', q: 'tuna bluefish mackerel' },
+                        { id: 'bright_colors', label: 'Bright / Bold colors', icon: '🌈', q: 'sunfish wrasse parrotfish dace' },
+                        { id: 'large_mouth',   label: 'Very large mouth',     icon: '👄', q: 'bass walleye pike' }
+                    ]
+                },
+                {
+                    id: 'color', question: 'Primary color / pattern?', multi: true,
+                    options: [
+                        { id: 'silver_gray',  label: 'Silver / Gray',     color: '#c0c0c0' },
+                        { id: 'brown_olive',  label: 'Brown / Olive',     color: '#6B8E23' },
+                        { id: 'green',        label: 'Green',             color: '#2e7d32' },
+                        { id: 'yellow',       label: 'Yellow / Gold',     color: '#f1c40f' },
+                        { id: 'spotted',      label: 'Spotted / Speckled', icon: '🔵' },
+                        { id: 'striped',      label: 'Striped',           icon: '〰️' },
+                        { id: 'bright_red',   label: 'Red / Orange',      color: '#e74c3c' }
+                    ]
+                }
+            ]
+        },
+        Mollusca: {
+            label: 'Shell / Mollusk', icon: '🐚',
+            steps: [
+                {
+                    id: 'shell_type', question: 'What type of shell or mollusk?',
+                    options: [
+                        { id: 'snail_spiral',  label: 'Coiled / Spiral snail',   icon: '🐌', q: 'snail gastropod periwinkle whelk conch' },
+                        { id: 'bivalve',       label: 'Two-shelled / Bivalve',   icon: '🐚', q: 'clam oyster mussel scallop cockle' },
+                        { id: 'limpet_cap',    label: 'Cap-shaped / Limpet',     icon: '⛰️', q: 'limpet abalone keyhole' },
+                        { id: 'chiton',        label: 'Multi-plated / Chiton',   icon: '🪨', q: 'chiton polyplacophora' },
+                        { id: 'slug_nudibranch', label: 'No shell / Slug',       icon: '🐛', q: 'slug nudibranch sea slug' },
+                        { id: 'cephalopod',    label: 'Octopus / Squid',         icon: '🐙', q: 'octopus squid cuttlefish nautilus' }
+                    ]
+                },
+                {
+                    id: 'habitat', question: 'Where did you find it?',
+                    options: [
+                        { id: 'ocean_beach',   label: 'Ocean beach / Washed up', icon: '🏖️', q: 'marine ocean intertidal' },
+                        { id: 'tide_pool',     label: 'Tide pool / Rocky shore', icon: '🪸', q: 'tidepool rocky intertidal' },
+                        { id: 'shallow_sea',   label: 'Shallow water / Reef',    icon: '🌊', q: 'reef subtidal shallow marine' },
+                        { id: 'freshwater',    label: 'Lake / Stream / Pond',    icon: '💧', q: 'freshwater pond river snail mussel' },
+                        { id: 'land_forest',   label: 'Land / Garden / Forest',  icon: '🌲', q: 'land snail slug garden terrestrial' }
+                    ]
+                },
+                {
+                    id: 'size', question: 'How big is the shell?',
+                    options: [
+                        { id: 'tiny',   label: 'Tiny (< 1 cm)',    icon: '🔸', q: 'tiny small periwinkle micro' },
+                        { id: 'small',  label: 'Small (1–4 cm)',   icon: '🐚', q: 'small cockle tellin scallop' },
+                        { id: 'medium', label: 'Medium (4–12 cm)', icon: '🦪', q: 'medium oyster whelk turban' },
+                        { id: 'large',  label: 'Large (> 12 cm)',  icon: '🐘', q: 'large conch abalone giant clam' }
+                    ]
+                },
+                {
+                    id: 'color', question: 'Color / pattern?', multi: true,
+                    options: [
+                        { id: 'white_cream',   label: 'White / Cream',         color: '#f5f0e8', border: true },
+                        { id: 'brown_tan',     label: 'Brown / Tan',           color: '#8B6914' },
+                        { id: 'orange_pink',   label: 'Orange / Pink',         color: '#e91e8c' },
+                        { id: 'purple',        label: 'Purple / Lavender',     color: '#9b59b6' },
+                        { id: 'banded',        label: 'Banded / Patterned',    icon: '〰️' },
+                        { id: 'iridescent',    label: 'Iridescent / Pearly',   icon: '✨' }
+                    ]
+                }
+            ]
         }
     },
 

@@ -168,6 +168,8 @@ export const ui = {
         const lng = this.app.map.pos?.lng || -74.00;
         if (tab === 'nearby') await this._renderNearby(el, lat, lng);
         else if (tab === 'season') await this._renderInSeason(el, lat, lng);
+        else if (tab === 'fish') await this._renderInSeason(el, lat, lng, 'Actinopterygii');
+        else if (tab === 'shells') await this._renderInSeason(el, lat, lng, 'Mollusca');
         else if (tab === 'community') await this._renderCommunity(el, lat, lng);
         else if (tab === 'foryou') await this._renderForYou(el, lat, lng);
     },
@@ -178,11 +180,16 @@ export const ui = {
         el.innerHTML = '<div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Community Sightings — Last 7 Days</div>' + obs.map(o => this._obsCard(o)).join('');
     },
 
-    async _renderInSeason(el, lat, lng) {
-        const species = await this.app.inat.seasonalSpecies(lat, lng, { limit: 80 });
+    async _renderInSeason(el, lat, lng, iconicFilter) {
+        const opts = { limit: 80 };
+        if (iconicFilter) opts.iconic = iconicFilter;
+        const species = await this.app.inat.seasonalSpecies(lat, lng, opts);
         if (!species.length) { el.innerHTML = this._emptyState('No seasonal data found for your location.'); return; }
         const season = this.app.data.currentSeason();
-        el.innerHTML = '<div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">' + season.icon + ' ' + season.name + ' — Species Active Near You</div>' +
+        const label = iconicFilter === 'Actinopterygii' ? '🐟 Fish Active Near You' :
+                      iconicFilter === 'Mollusca' ? '🐚 Shells & Mollusks Near You' :
+                      season.icon + ' ' + season.name + ' — Species Active Near You';
+        el.innerHTML = '<div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">' + label + '</div>' +
             '<div class="grid grid-cols-2 gap-3">' + species.map(s => this._speciesCard(s)).join('') + '</div>';
     },
 
@@ -217,6 +224,7 @@ export const ui = {
         const photo = o.photos?.[0]?.url?.replace('square', 'small');
         const emoji = this.app.inat.iconicEmoji(o.taxon?.iconic_taxon_name);
         const taxonId = o.taxon?.id || 0;
+        const qg = o.quality_grade ? this.app.inat.qualityGradeLabel(o.quality_grade) : null;
         return '<button onclick="app.ui.openSpeciesDetail(' + taxonId + ')" class="obs-card w-full text-left">' +
             (photo ? '<img src="' + photo + '" class="obs-card-img" loading="lazy">' : '<div class="obs-card-img bg-brand/10 rounded-2xl flex items-center justify-center text-3xl">' + emoji + '</div>') +
             '<div class="flex-1 min-w-0">' +
@@ -224,7 +232,10 @@ export const ui = {
             '<div class="text-xs text-gray-400 italic truncate">' + (o.taxon?.name || '') + '</div>' +
             '<div class="text-[10px] text-gray-400 mt-1">' + (o.place_guess || '') + '</div>' +
             (o.user?.login ? '<div class="text-[10px] text-brand mt-0.5 font-semibold">@' + o.user.login + '</div>' : '') +
-            '<div class="text-[10px] text-gray-400">' + (o.observed_on || '') + '</div>' +
+            '<div class="flex items-center gap-1.5 mt-1">' +
+            '<span class="text-[10px] text-gray-400">' + (o.observed_on || '') + '</span>' +
+            (qg ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full ' + qg.css + '">' + qg.icon + '</span>' : '') +
+            '</div>' +
             '</div></button>';
     },
 
@@ -235,12 +246,16 @@ export const ui = {
         const imgEl = imgSrc
             ? '<img src="' + imgSrc + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\"w-full h-full flex items-center justify-center text-4xl bg-brand/5\\\">' + emoji + '</div>\'">'
             : '<div class="w-full h-full flex items-center justify-center text-4xl bg-brand/5">' + emoji + '</div>';
+        const consBadge = s.conservationStatus ? this.app.inat.conservationBadge(s.conservationStatus) : null;
         return '<button onclick="app.ui.openSpeciesDetail(' + s.id + ')" class="species-discover-card">' +
             '<div class="species-discover-img">' + imgEl + '</div>' +
             '<div class="species-discover-body">' +
             '<div class="font-bold text-xs text-gray-900 dark:text-white truncate leading-tight">' + s.name + '</div>' +
             (s.sciName ? '<div class="text-[10px] text-gray-400 italic truncate">' + s.sciName + '</div>' : '') +
+            '<div class="flex flex-wrap gap-1 mt-1">' +
             '<span class="species-rarity-pill ' + rarityClass + '">' + s.rarity + '</span>' +
+            (consBadge ? '<span class="species-rarity-pill ' + consBadge.css + '" title="' + consBadge.label + '">⚠️</span>' : '') +
+            '</div>' +
             '</div></button>';
     },
 
@@ -268,7 +283,11 @@ export const ui = {
         panel.style.transform = 'translateX(0)';
         panel.classList.add('panel-active');
         content.innerHTML = '<div class="flex items-center justify-center py-20 text-gray-400 gap-2"><span class="material-symbols-rounded animate-spin">progress_activity</span></div>';
-        const taxon = await this.app.inat.getTaxon(taxonId);
+        // Fetch taxon details and ID summaries in parallel
+        const [taxon, idSummaries] = await Promise.all([
+            this.app.inat.getTaxon(taxonId),
+            this.app.inat.getTaxonIdSummary(taxonId)
+        ]);
         if (!taxon) { content.innerHTML = '<div class="p-8 text-center text-gray-400">Species not found.</div>'; return; }
         const heroImg = taxon.default_photo?.medium_url || taxon.taxon_photos?.[0]?.photo?.medium_url || '';
         const commonName = taxon.preferred_common_name || taxon.name;
@@ -277,6 +296,7 @@ export const ui = {
         const inCatalogue = !!cat;
         const wikiSummary = taxon.wikipedia_summary || '';
         const status = taxon.conservation_status?.status_name || '';
+        const consBadge = status ? this.app.inat.conservationBadge(status) : null;
 
         // Build photo list for lightbox: hero + taxon_photos
         const allPhotos = [];
@@ -302,6 +322,25 @@ export const ui = {
                 ).join('') +
                 '</div></div>';
         }
+
+        // ID photo tips from community identifiers
+        let idTipsHtml = '';
+        if (idSummaries && idSummaries.length) {
+            const tips = idSummaries.filter(s => s.photoTip || s.summary);
+            if (tips.length) {
+                idTipsHtml = '<div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-4">' +
+                    '<div class="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">' +
+                    '<span class="material-symbols-rounded text-base">photo_camera</span>ID Tips from Community</div>' +
+                    '<div class="space-y-2">' +
+                    tips.slice(0, 3).map(t =>
+                        '<div class="text-sm text-amber-900 dark:text-amber-200">' +
+                        (t.visualKeyGroup ? '<span class="text-xs font-bold uppercase text-amber-600 dark:text-amber-400">' + t.visualKeyGroup + ':</span> ' : '') +
+                        (t.photoTip || t.summary) + '</div>'
+                    ).join('') +
+                    '</div></div>';
+            }
+        }
+
         content.innerHTML =
             '<div class="relative">' +
             (heroImg
@@ -317,9 +356,10 @@ export const ui = {
             '<div class="flex flex-wrap gap-2">' +
             '<span class="species-stat-pill bg-brand/10 text-brand">' + this.app.inat.iconicEmoji(iconic) + ' ' + this.app.inat.iconicLabel(iconic) + '</span>' +
             (inCatalogue ? '<span class="species-stat-pill bg-green-100 text-green-700">✓ In My Catalogue · ' + cat.count + 'x</span>' : '') +
-            (status ? '<span class="species-stat-pill bg-amber-100 text-amber-700">⚠️ ' + status + '</span>' : '') +
+            (consBadge ? '<span class="species-stat-pill ' + consBadge.css + '">⚠️ ' + consBadge.label + '</span>' : '') +
             '</div>' +
             (wikiSummary ? '<div class="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4"><div class="text-xs font-black uppercase tracking-wider text-gray-400 mb-2">About</div><p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">' + wikiSummary.replace(/<[^>]+>/g,'').substring(0,600) + (wikiSummary.length > 600 ? '…' : '') + '</p></div>' : '') +
+            idTipsHtml +
             photosHtml +
             '<button onclick="app.ui.openLogObservation(' + taxonId + ')" class="w-full bg-brand text-white py-4 rounded-2xl font-black text-base shadow-lg shadow-brand/30 active:scale-95 transition-transform">' +
             '<span class="material-symbols-rounded align-middle mr-1">add_a_photo</span>' +
@@ -551,7 +591,7 @@ export const ui = {
     _renderSpeciesSelectorTabs() {
         const el = document.getElementById('species-selector-tabs');
         if (!el) return;
-        const groups = ['All', 'Aves', 'Plantae', 'Mammalia', 'Insecta', 'Reptilia', 'Amphibia'];
+        const groups = ['All', 'Aves', 'Plantae', 'Mammalia', 'Insecta', 'Reptilia', 'Amphibia', 'Actinopterygii', 'Mollusca'];
         el.innerHTML = groups.map(g => {
             const filter = g === 'All' ? 'all' : g;
             const isActive = this.selectorActiveFilter === filter;

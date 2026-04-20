@@ -17,16 +17,20 @@ export const inat = {
 
     // Shared field sets
     OBS_FIELDS: [
-        'id', 'observed_on', 'place_guess', 'location', 'description',
+        'id', 'uuid', 'observed_on', 'place_guess', 'location', 'description',
+        'quality_grade',
         'taxon.id', 'taxon.name', 'taxon.preferred_common_name',
-        'taxon.iconic_taxon_name',
+        'taxon.iconic_taxon_name', 'taxon.rank',
+        'taxon.conservation_status.status_name',
         'taxon.default_photo.url', 'taxon.default_photo.medium_url', 'taxon.default_photo.square_url',
-        'photos.url', 'user.login', 'user.icon_url'
+        'photos.url', 'photos.medium_url', 'photos.square_url',
+        'user.login', 'user.icon_url'
     ].join(','),
 
     TAXON_FIELDS: [
         'taxon.id', 'taxon.name', 'taxon.preferred_common_name',
-        'taxon.iconic_taxon_name',
+        'taxon.iconic_taxon_name', 'taxon.rank',
+        'taxon.conservation_status.status_name',
         'taxon.default_photo.url', 'taxon.default_photo.medium_url', 'taxon.default_photo.square_url'
     ].join(','),
 
@@ -55,9 +59,12 @@ export const inat = {
     },
 
     // Species counts near location in current month (for field guide & seasonal)
+    // Now includes Fish (Actinopterygii) and Shells/Mollusks (Mollusca) by default
     async seasonalSpecies(lat, lng, { radius = 50, limit = 200, iconic = null } = {}) {
         const month = new Date().getMonth() + 1;
-        const iconicParam = iconic ? `&iconic_taxa=${iconic}` : `&iconic_taxa=Plantae,Aves,Mammalia,Insecta,Amphibia,Reptilia`;
+        const iconicParam = iconic
+            ? `&iconic_taxa=${iconic}`
+            : `&iconic_taxa=Plantae,Aves,Mammalia,Insecta,Amphibia,Reptilia,Actinopterygii,Mollusca`;
         const key = `seasonal:${lat.toFixed(2)}:${lng.toFixed(2)}:${radius}:${month}:${iconic}`;
         const cached = this._get(key);
         if (cached) return cached;
@@ -78,6 +85,8 @@ export const inat = {
                     img: t.default_photo?.medium_url,
                     squareImg: t.default_photo?.square_url,
                     iconic: t.iconic_taxon_name,
+                    rank: t.rank,
+                    conservationStatus: t.conservation_status?.status_name || null,
                     count: c,
                     rarity: c > 100 ? 'Common' : c > 20 ? 'Uncommon' : 'Rare',
                     dp: Math.round(c > 100 ? 50 : c > 20 ? 100 : 200)
@@ -99,7 +108,7 @@ export const inat = {
         const cached = this._get(key);
         if (cached) return cached;
         try {
-            const fields = 'id,name,preferred_common_name,iconic_taxon_name,default_photo.square_url,default_photo.medium_url';
+            const fields = 'id,name,preferred_common_name,iconic_taxon_name,rank,default_photo.square_url,default_photo.medium_url';
             const res = await fetch(
                 `${this.BASE}/taxa/autocomplete?q=${encodeURIComponent(q)}&per_page=${limit}${iconicParam}${locationParam}&fields=${fields}`
             );
@@ -118,10 +127,12 @@ export const inat = {
         const cached = this._get(key);
         if (cached) return cached;
         try {
-            const fields = 'id,name,preferred_common_name,iconic_taxon_name,wikipedia_summary,' +
-                'conservation_status.status_name,' +
+            const fields = 'id,name,preferred_common_name,iconic_taxon_name,rank,wikipedia_summary,' +
+                'conservation_status.status_name,conservation_status.iucn_status_code,' +
+                'establishment_means.establishment_means,' +
                 'default_photo.url,default_photo.medium_url,default_photo.square_url,' +
-                'taxon_photos.photo.url,taxon_photos.photo.medium_url,taxon_photos.photo.square_url';
+                'taxon_photos.photo.url,taxon_photos.photo.medium_url,taxon_photos.photo.square_url,' +
+                'taxon_photos.photo.attribution';
             const res = await fetch(`${this.BASE}/taxa/${id}?fields=${fields}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
@@ -130,6 +141,28 @@ export const inat = {
         } catch (e) {
             console.error('inat.getTaxon', e);
             return null;
+        }
+    },
+
+    // ID summaries for a taxon — photo tips & visual key groups from community identifiers
+    // See: GET /taxa/{id}/id_summaries
+    async getTaxonIdSummary(id) {
+        const key = `idsum:${id}`;
+        const cached = this._get(key);
+        if (cached) return cached;
+        try {
+            const res = await fetch(`${this.BASE}/taxa/${id}/id_summaries`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            const results = (json.results || []).slice(0, 5).map(s => ({
+                summary: s.summary || '',
+                photoTip: s.photo_tip || '',
+                visualKeyGroup: s.visual_key_group || ''
+            })).filter(s => s.summary || s.photoTip);
+            return this._set(key, results);
+        } catch (e) {
+            // ID summaries endpoint may not have data for all taxa; that's fine
+            return this._set(key, []);
         }
     },
 
@@ -154,6 +187,8 @@ export const inat = {
                 img: i.taxon.default_photo?.medium_url,
                 squareImg: i.taxon.default_photo?.square_url,
                 iconic: i.taxon.iconic_taxon_name,
+                rank: i.taxon.rank,
+                conservationStatus: i.taxon.conservation_status?.status_name || null,
                 count: i.count,
                 rarity: i.count > 100 ? 'Common' : i.count > 20 ? 'Uncommon' : 'Rare',
                 dp: Math.round(i.count > 100 ? 50 : i.count > 20 ? 100 : 200),
@@ -173,13 +208,35 @@ export const inat = {
         return picks;
     },
 
+    // Helper: quality grade label + icon
+    qualityGradeLabel(grade) {
+        if (grade === 'research') return { label: 'Research Grade', icon: '🔬', css: 'bg-green-100 text-green-700' };
+        if (grade === 'needs_id')  return { label: 'Needs ID',       icon: '🔍', css: 'bg-blue-100 text-blue-700' };
+        return { label: 'Casual', icon: '📷', css: 'bg-gray-100 text-gray-500' };
+    },
+
+    // Helper: IUCN conservation status badge
+    conservationBadge(statusName) {
+        if (!statusName) return null;
+        const s = statusName.toLowerCase();
+        if (s.includes('extinct') && !s.includes('wild'))  return { label: statusName, css: 'bg-gray-900 text-white' };
+        if (s.includes('extinct in the wild'))              return { label: statusName, css: 'bg-purple-700 text-white' };
+        if (s.includes('critically'))                       return { label: statusName, css: 'bg-red-700 text-white' };
+        if (s.includes('endangered'))                       return { label: statusName, css: 'bg-red-500 text-white' };
+        if (s.includes('vulnerable'))                       return { label: statusName, css: 'bg-orange-500 text-white' };
+        if (s.includes('near'))                             return { label: statusName, css: 'bg-yellow-500 text-black' };
+        if (s.includes('least'))                            return { label: statusName, css: 'bg-green-500 text-white' };
+        return { label: statusName, css: 'bg-gray-200 text-gray-700' };
+    },
+
     // Helper: iconic taxon label
     iconicLabel(iconic) {
         const map = {
             Aves: 'Bird', Plantae: 'Plant', Mammalia: 'Mammal',
             Insecta: 'Insect', Reptilia: 'Reptile', Amphibia: 'Amphibian',
             Arachnida: 'Arachnid', Fungi: 'Fungus', Actinopterygii: 'Fish',
-            Mollusca: 'Mollusk', Animalia: 'Animal'
+            Mollusca: 'Mollusk', Animalia: 'Animal', Chromista: 'Seaweed',
+            Protozoa: 'Protozoa'
         };
         return map[iconic] || iconic || 'Wildlife';
     },
@@ -190,7 +247,8 @@ export const inat = {
             Aves: '🐦', Plantae: '🌿', Mammalia: '🦊',
             Insecta: '🦋', Reptilia: '🦎', Amphibia: '🐸',
             Arachnida: '🕷️', Fungi: '🍄', Actinopterygii: '🐟',
-            Mollusca: '🐌', Animalia: '🐾'
+            Mollusca: '🐚', Animalia: '🐾', Chromista: '🪸',
+            Protozoa: '🔬'
         };
         return map[iconic] || '🌍';
     }
