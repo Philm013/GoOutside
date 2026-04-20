@@ -187,16 +187,15 @@ export const inat = {
     },
 
     // Top species for an iconic taxon — used by knowledge graph
-    async queryByTraits(lat, lng, { iconic, q = null, month = null, limit = 24 } = {}) {
-        const m = month || (new Date().getMonth() + 1);
-        const qParam = q ? `&q=${encodeURIComponent(q)}` : '';
-        const key = `traits:${lat.toFixed(2)}:${lng.toFixed(2)}:${iconic}:${m}:${q}`;
+    async queryByTraits(lat, lng, { iconic, limit = 24 } = {}) {
+        const m = new Date().getMonth() + 1;
+        const key = `traits:${lat.toFixed(2)}:${lng.toFixed(2)}:${iconic}:${m}`;
         const cached = this._get(key);
         if (cached) return cached;
         try {
             const res = await fetch(
                 `${this.BASE}/observations/species_counts?lat=${lat}&lng=${lng}&radius=100` +
-                `&month=${m}&iconic_taxa=${iconic}&verifiable=true&per_page=${limit}${qParam}&fields=${this.TAXON_FIELDS}`
+                `&month=${m}&iconic_taxa=${iconic}&verifiable=true&per_page=${limit}&fields=${this.TAXON_FIELDS}`
             );
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();

@@ -525,36 +525,49 @@ export const identify = {
                 <p class="text-gray-500 font-semibold">Searching nearby species…</p>
             </div>`;
 
-        const lat = this.app.map.pos.lat || 40.71;
-        const lng = this.app.map.pos.lng || -74.00;
+        const lat = this.app.map.pos?.lat || 40.71;
+        const lng = this.app.map.pos?.lng || -74.00;
         const tree = this.TRAIT_TREES[this.kgCategory];
 
-        // Build search query from selections
-        const qParts = [];
+        // Collect keyword hints from trait selections (used for client-side scoring only)
+        const keywords = [];
         for (const step of tree.steps) {
             const sel = this.kgSelections[step.id];
             if (!sel) continue;
             const ids = Array.isArray(sel) ? sel : [sel];
             for (const id of ids) {
                 const opt = step.options.find(o => o.id === id);
-                if (opt?.q) qParts.push(opt.q);
-                else if (opt && !opt.q && !opt.color) qParts.push(opt.label.toLowerCase());
+                if (opt?.q) keywords.push(...opt.q.split(' '));
+                else if (opt && !opt.color) keywords.push(...opt.label.toLowerCase().split(/\s+/));
             }
         }
-        const q = qParts.join(' ').trim() || null;
 
         try {
-            const results = await this.app.inat.queryByTraits(lat, lng, {
+            // Fetch all nearby species for this taxon — no text filter (iNat &q= searches
+            // observation notes, not species traits, so it always returns 0 for trait words)
+            const all = await this.app.inat.queryByTraits(lat, lng, {
                 iconic: this.kgCategory,
-                q,
-                limit: 20
+                limit: 60
             });
-            this.kgResults = results;
+
+            // Score each species: +1 for each keyword that appears in common or scientific name
+            if (keywords.length) {
+                const kw = keywords.map(k => k.toLowerCase()).filter(k => k.length > 2);
+                all.forEach(s => {
+                    const haystack = ((s.name || '') + ' ' + (s.sciName || '')).toLowerCase();
+                    s._score = kw.reduce((n, k) => n + (haystack.includes(k) ? 1 : 0), 0);
+                });
+                all.sort((a, b) => (b._score - a._score) || (b.count - a.count));
+            }
+
+            this.kgResults = all.slice(0, 20);
         } catch (e) {
+            console.error('_fetchKGResults', e);
             this.kgResults = [];
         }
         this._renderKGResults(document.getElementById('kg-body'));
     },
+
 
     _renderKGResults(body) {
         if (!body) return;

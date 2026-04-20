@@ -9,7 +9,7 @@
  *  • Everything else — Network-only (no stale data risk).
  */
 
-const CACHE_VERSION = 'v20260420a';
+const CACHE_VERSION = 'v20260420b';
 const SHELL_CACHE   = `ede-shell-${CACHE_VERSION}`;
 const API_CACHE     = 'ede-api-v1';     // long-lived, keyed by URL
 const MODEL_CACHE   = 'ede-models-v1';  // BirdNET model shards
