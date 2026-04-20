@@ -148,10 +148,11 @@
             class="w-11 h-11 rounded-full glass-hud shadow-md flex items-center justify-center text-2xl active:scale-95 transition-transform border border-white/40">
             <span id="hud-avatar">🦋</span>
         </button>
-        <div class="glass-hud px-3 py-1.5 rounded-2xl shadow-md">
+        <button onclick="app.ui.openPanel('panel-about')" aria-label="Open about and sources"
+            class="glass-hud px-3 py-1.5 rounded-2xl shadow-md text-left active:scale-95 transition-transform">
             <div class="text-[9px] font-black tracking-widest uppercase text-gray-400 dark:text-green-300/60">Earth Day</div>
             <div class="text-sm font-black text-brand dark:text-green-300" style="font-family:Sora,sans-serif">Everyday</div>
-        </div>
+        </button>
     </div>
 
     <!-- Stats bar -->
@@ -270,6 +271,22 @@
                     <div class="flex-1 min-w-0">
                         <div class="id-tool-title">Key It Out</div>
                         <div class="id-tool-desc">Guided ID using key visual features and traits</div>
+                    </div>
+                </button>
+                <button onclick="app.ui.openKGModal('Actinopterygii')"
+                    class="id-tool-card">
+                    <div class="id-tool-icon">🐟</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="id-tool-title">Identify Fish</div>
+                        <div class="id-tool-desc">Trait-based fish identification using your local sightings context</div>
+                    </div>
+                </button>
+                <button onclick="app.ui.openKGModal('Mollusca')"
+                    class="id-tool-card">
+                    <div class="id-tool-icon">🐚</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="id-tool-title">Identify Shells &amp; Mollusks</div>
+                        <div class="id-tool-desc">Guided shell and mollusk matching based on habitat and form</div>
                     </div>
                 </button>
                 <button onclick="app.ui.openLogObservation()"
@@ -418,28 +435,60 @@
             <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
                 <h3 class="font-bold text-sm mb-3">🗺 Map Layers</h3>
                 <label class="flex items-center justify-between py-2 cursor-pointer">
-                    <span class="text-sm dark:text-white">All Community Sightings</span>
-                    <input id="toggle-community-layer" type="checkbox" checked onchange="app.map.toggleCommunityLayer(this.checked)" class="w-5 h-5 accent-brand">
+                    <span class="text-sm dark:text-white">Community Sightings (All Types)</span>
+                    <input id="toggle-community-layer" data-layer-toggle="community" type="checkbox" checked onchange="app.map.toggleCommunityLayer(this.checked)" class="w-5 h-5 accent-brand">
                 </label>
                 <label class="flex items-center justify-between py-2 cursor-pointer">
                     <span class="text-sm dark:text-white">My Sightings</span>
-                    <input id="toggle-personal-layer" type="checkbox" checked onchange="app.map.togglePersonalLayer(this.checked)" class="w-5 h-5 accent-brand">
+                    <input id="toggle-personal-layer" data-layer-toggle="personal" type="checkbox" checked onchange="app.map.togglePersonalLayer(this.checked)" class="w-5 h-5 accent-brand">
                 </label>
-                <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-3 mb-1">By Type</div>
-                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐦 Birds</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Aves',this.checked)" class="w-5 h-5 accent-brand"></label>
-                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🌿 Plants</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Plantae',this.checked)" class="w-5 h-5 accent-brand"></label>
-                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦊 Mammals</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Mammalia',this.checked)" class="w-5 h-5 accent-brand"></label>
-                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦋 Insects</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Insecta',this.checked)" class="w-5 h-5 accent-brand"></label>
-                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦎 Reptiles</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Reptilia',this.checked)" class="w-5 h-5 accent-brand"></label>
-                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐸 Amphibians</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Amphibia',this.checked)" class="w-5 h-5 accent-brand"></label>
-                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐟 Fish</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Actinopterygii',this.checked)" class="w-5 h-5 accent-brand"></label>
-                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐚 Shells</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Mollusca',this.checked)" class="w-5 h-5 accent-brand"></label>
-                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🕷️ Spiders</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Arachnida',this.checked)" class="w-5 h-5 accent-brand"></label>
-                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🍄 Fungi</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Fungi',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-3 mb-1">Filter Community by Type</div>
+                <p class="text-[11px] text-gray-500 mb-2">Type filters use the same nearby community sightings dataset for better consistency.</p>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐦 Birds</span><input data-iconic-layer="Aves" type="checkbox" onchange="app.map.toggleIconicLayer('Aves',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🌿 Plants</span><input data-iconic-layer="Plantae" type="checkbox" onchange="app.map.toggleIconicLayer('Plantae',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦊 Mammals</span><input data-iconic-layer="Mammalia" type="checkbox" onchange="app.map.toggleIconicLayer('Mammalia',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦋 Insects</span><input data-iconic-layer="Insecta" type="checkbox" onchange="app.map.toggleIconicLayer('Insecta',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦎 Reptiles</span><input data-iconic-layer="Reptilia" type="checkbox" onchange="app.map.toggleIconicLayer('Reptilia',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐸 Amphibians</span><input data-iconic-layer="Amphibia" type="checkbox" onchange="app.map.toggleIconicLayer('Amphibia',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐟 Fish</span><input data-iconic-layer="Actinopterygii" type="checkbox" onchange="app.map.toggleIconicLayer('Actinopterygii',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐚 Shells</span><input data-iconic-layer="Mollusca" type="checkbox" onchange="app.map.toggleIconicLayer('Mollusca',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🕷️ Spiders</span><input data-iconic-layer="Arachnida" type="checkbox" onchange="app.map.toggleIconicLayer('Arachnida',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🍄 Fungi</span><input data-iconic-layer="Fungi" type="checkbox" onchange="app.map.toggleIconicLayer('Fungi',this.checked)" class="w-5 h-5 accent-brand"></label>
             </div>
             <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
                 <h3 class="font-bold text-sm text-red-600 mb-3">⚠️ Data</h3>
                 <button onclick="app.ui.confirmClearData()" class="w-full bg-red-50 dark:bg-red-900/20 text-red-600 py-2.5 rounded-xl font-bold text-sm active:scale-95 border border-red-200 dark:border-red-800">Clear All Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. SPECIES DETAIL -->
+    <div id="panel-about" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">About Earth Day Everyday</h2>
+            <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-nav">
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-sm mb-2">Mission</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">Earth Day Everyday helps people explore, identify, and record local biodiversity with location-aware tools, guided identification, and a personal wildlife journal.</p>
+            </div>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-sm mb-2">Data &amp; Source Attribution</h3>
+                <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                    <li><strong>Species, observations, taxonomy, and photos:</strong> iNaturalist API and iNaturalist community content. <a class="text-brand font-semibold underline" href="https://api.inaturalist.org/v1/docs/" target="_blank" rel="noopener noreferrer">API docs</a> · <a class="text-brand font-semibold underline" href="https://www.inaturalist.org/pages/terms" target="_blank" rel="noopener noreferrer">Terms</a></li>
+                    <li><strong>Map framework:</strong> Leaflet. <a class="text-brand font-semibold underline" href="https://leafletjs.com/" target="_blank" rel="noopener noreferrer">leafletjs.com</a></li>
+                    <li><strong>Basemap tiles:</strong> OpenStreetMap data and CARTO basemaps. <a class="text-brand font-semibold underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OSM attribution</a> · <a class="text-brand font-semibold underline" href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO attribution</a></li>
+                    <li><strong>Bird audio identification:</strong> BirdNET model and labels (processed on-device in this app). <a class="text-brand font-semibold underline" href="https://birdnet.cornell.edu/" target="_blank" rel="noopener noreferrer">birdnet.cornell.edu</a></li>
+                </ul>
+            </div>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-sm mb-2">Knowledge Graph Identification</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">The “Key It Out” tools (including fish and shell/mollusk flows) use trait-based narrowing plus nearby iNaturalist records. Results are candidate suggestions and should be verified before formal reporting.</p>
+            </div>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-sm mb-2">Privacy</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">Bird audio processing is performed on-device. Your personal observations are stored locally on your device unless you choose to share data through external platforms.</p>
             </div>
         </div>
     </div>

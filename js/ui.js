@@ -706,8 +706,8 @@ export const ui = {
         this.renderHUDStats();
     },
 
-    openKGModal() {
-        if (this.app.identify) this.app.identify.startKnowledgeGraph();
+    openKGModal(initialCategory = null) {
+        if (this.app.identify) this.app.identify.startKnowledgeGraph(initialCategory);
         const modal = document.getElementById('kgModal');
         const inner = modal?.querySelector('.rounded-t-3xl');
         if (!modal) return;
@@ -928,20 +928,20 @@ export const ui = {
                     <span class="text-base leading-none shrink-0">${inat.iconicEmoji(t)}</span>
                     <span class="text-sm font-medium dark:text-white truncate">${inat.iconicLabel(t)}s</span>
                 </div>
-                <input type="checkbox" ${on ? 'checked' : ''}
+                <input type="checkbox" data-iconic-layer="${t}" ${on ? 'checked' : ''}
                     onchange="app.map.toggleIconicLayer('${t}', this.checked)"
                     class="w-4 h-4 accent-brand shrink-0">
             </label>`;
         }).join('');
 
         picker.innerHTML = `
-            <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">My Layers</div>
+            <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Map Layers</div>
             <label class="flex items-center justify-between py-1.5 gap-2 cursor-pointer">
                 <div class="flex items-center gap-2">
                     <div class="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0"></div>
-                    <span class="text-sm font-medium dark:text-white">All Sightings</span>
+                    <span class="text-sm font-medium dark:text-white">Community (All Types)</span>
                 </div>
-                <input type="checkbox" id="quick-toggle-community" ${commOn ? 'checked' : ''}
+                <input type="checkbox" id="quick-toggle-community" data-layer-toggle="community" ${commOn ? 'checked' : ''}
                     onchange="app.map.toggleCommunityLayer(this.checked)"
                     class="w-4 h-4 accent-brand shrink-0">
             </label>
@@ -950,11 +950,11 @@ export const ui = {
                     <div class="w-2.5 h-2.5 rounded-full bg-brand shrink-0"></div>
                     <span class="text-sm font-medium dark:text-white">My Sightings</span>
                 </div>
-                <input type="checkbox" id="quick-toggle-personal" ${persOn ? 'checked' : ''}
+                <input type="checkbox" id="quick-toggle-personal" data-layer-toggle="personal" ${persOn ? 'checked' : ''}
                     onchange="app.map.togglePersonalLayer(this.checked)"
                     class="w-4 h-4 accent-brand shrink-0">
             </label>
-            <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">By Type</div>
+            <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Filter Community by Type</div>
             ${taxaRows}`;
     },
 

@@ -368,11 +368,14 @@ export const identify = {
         }
     },
 
-    startKnowledgeGraph() {
+    startKnowledgeGraph(initialCategory = null) {
         this.kgCategory = null;
         this.kgSelections = {};
         this.kgStep = 0;
         this.kgResults = [];
+        if (initialCategory && this.TRAIT_TREES[initialCategory]) {
+            this.kgCategory = initialCategory;
+        }
         this.app.state._usedKeyOut = true;
         this.app.saveState();
         this.renderKGModal();
@@ -943,4 +946,3 @@ export const identify = {
         this._updateLiveResults();
     }
 };
-

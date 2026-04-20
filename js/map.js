@@ -7,6 +7,8 @@ export const map = {
     centered: false,
     communityMarkers: [],
     personalMarkers: [],
+    _communityObs: [],
+    _communityObsLoaded: false,
 
     _esc(v) {
         return String(v ?? '')
@@ -28,6 +30,11 @@ export const map = {
 
         this.communityLayer = L.layerGroup().addTo(this.map);
         this.personalLayer = L.layerGroup().addTo(this.map);
+        this._communityLayerOn = true;
+        this._personalLayerOn = true;
+        this._iconicLayerState = {};
+        this._iconicLayers = {};
+        this._syncLayerInputs();
 
         this.me = L.marker([0, 0], {
             icon: L.divIcon({
@@ -77,13 +84,22 @@ export const map = {
 
     async _loadCommunityObs() {
         const obs = await this.app.inat.nearbyObservations(this.pos.lat, this.pos.lng, { limit: 50, days: 14 });
+        this._communityObs = obs || [];
+        this._communityObsLoaded = true;
         this.communityLayer.clearLayers();
         this.communityMarkers = [];
-        obs.forEach(o => this._addCommunityPin(o));
+        (obs || []).forEach(o => this._addCommunityPin(o));
+        Object.keys(this._iconicLayerState || {}).forEach(iconic => {
+            if (!this._iconicLayerState[iconic]) return;
+            this._rebuildIconicLayerFromCommunity(iconic);
+        });
+        this._applyCommunityLayerVisibility();
+        this._syncLayerInputs();
     },
 
-    _addCommunityPin(o) {
-        const [lat, lng] = o.location.split(",").map(parseFloat);
+    _createCommunityMarker(o, targetLayer = this.communityLayer) {
+        const [lat, lng] = String(o.location || '').split(",").map(v => parseFloat(v));
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
         const taxonId = o.taxon?.id;
         const name = o.taxon?.preferred_common_name || o.taxon?.name || "Unknown";
         const photo = o.photos?.[0]?.url?.replace("square", "small");
@@ -96,7 +112,7 @@ export const map = {
             iconSize: [36, 36],
             iconAnchor: [18, 18]
         });
-        const marker = L.marker([lat, lng], { icon }).addTo(this.communityLayer);
+        const marker = L.marker([lat, lng], { icon }).addTo(targetLayer);
         const popupHtml = "<div class='com-popup'>" +
             (squarePhoto ? "<img src='" + this._esc(squarePhoto) + "' class='com-popup-img'>" : "<div class='com-popup-emoji'>" + this._esc(emoji) + "</div>") +
             "<div class='com-popup-body'>" +
@@ -106,7 +122,67 @@ export const map = {
             (taxonId ? "<button onclick=\"app.ui.openSpeciesDetail(" + taxonId + ");\" class='com-popup-btn'>View Species ›</button>" : "") +
             "</div></div>";
         marker.bindPopup(popupHtml, { maxWidth: 240, className: 'ede-popup' });
+        return marker;
+    },
+
+    _addCommunityPin(o) {
+        const marker = this._createCommunityMarker(o, this.communityLayer);
+        if (!marker) return;
         this.communityMarkers.push(marker);
+    },
+
+    _syncLayerInputs() {
+        const commOn = this._communityLayerOn !== false;
+        const persOn = this._personalLayerOn !== false;
+        document.querySelectorAll('input[data-layer-toggle="community"]').forEach(cb => { cb.checked = commOn; });
+        document.querySelectorAll('input[data-layer-toggle="personal"]').forEach(cb => { cb.checked = persOn; });
+        document.querySelectorAll('input[data-iconic-layer]').forEach(cb => {
+            const iconic = cb.dataset.iconicLayer;
+            cb.checked = !!(this._iconicLayerState && this._iconicLayerState[iconic]);
+        });
+    },
+
+    _applyCommunityLayerVisibility() {
+        const communityOn = this._communityLayerOn !== false;
+        const selected = Object.keys(this._iconicLayerState || {}).filter(k => this._iconicLayerState[k]);
+        if (!communityOn) {
+            if (this.map.hasLayer(this.communityLayer)) this.map.removeLayer(this.communityLayer);
+            Object.values(this._iconicLayers || {}).forEach(layer => {
+                if (this.map.hasLayer(layer)) this.map.removeLayer(layer);
+            });
+            return;
+        }
+        if (!selected.length) {
+            if (!this.map.hasLayer(this.communityLayer)) this.communityLayer.addTo(this.map);
+            Object.values(this._iconicLayers || {}).forEach(layer => {
+                if (this.map.hasLayer(layer)) this.map.removeLayer(layer);
+            });
+            return;
+        }
+        if (this.map.hasLayer(this.communityLayer)) this.map.removeLayer(this.communityLayer);
+        Object.keys(this._iconicLayers || {}).forEach(layerId => {
+            const iconic = layerId.replace('iconic_', '');
+            const layer = this._iconicLayers[layerId];
+            if (!layer) return;
+            if (selected.includes(iconic)) {
+                if (!this.map.hasLayer(layer)) layer.addTo(this.map);
+            } else if (this.map.hasLayer(layer)) {
+                this.map.removeLayer(layer);
+            }
+        });
+    },
+
+    _rebuildIconicLayerFromCommunity(iconicTaxonName) {
+        if (!this._iconicLayers) this._iconicLayers = {};
+        const layerId = 'iconic_' + iconicTaxonName;
+        const oldLayer = this._iconicLayers[layerId];
+        if (oldLayer && this.map.hasLayer(oldLayer)) this.map.removeLayer(oldLayer);
+        const layer = L.layerGroup();
+        const obs = (this._communityObs || []).filter(o =>
+            this.app.inat.normalizeIconicTaxon(o?.taxon?.iconic_taxon_name) === iconicTaxonName
+        );
+        obs.forEach(o => this._createCommunityMarker(o, layer));
+        this._iconicLayers[layerId] = layer;
     },
 
     _loadPersonalSightings() {
@@ -157,28 +233,18 @@ export const map = {
 
     toggleCommunityLayer(on) {
         this._communityLayerOn = on;
-        const cb = document.getElementById('toggle-community-layer');
-        const cbQuick = document.getElementById('quick-toggle-community');
-        if (on) {
-            if (!this.map.hasLayer(this.communityLayer)) this.communityLayer.addTo(this.map);
-        } else {
-            if (this.map.hasLayer(this.communityLayer)) this.map.removeLayer(this.communityLayer);
-        }
-        if (cb) cb.checked = on;
-        if (cbQuick) cbQuick.checked = on;
+        this._applyCommunityLayerVisibility();
+        this._syncLayerInputs();
     },
 
     togglePersonalLayer(on) {
         this._personalLayerOn = on;
-        const cb = document.getElementById('toggle-personal-layer');
-        const cbQuick = document.getElementById('quick-toggle-personal');
         if (on) {
             if (!this.map.hasLayer(this.personalLayer)) this.personalLayer.addTo(this.map);
         } else {
             if (this.map.hasLayer(this.personalLayer)) this.map.removeLayer(this.personalLayer);
         }
-        if (cb) cb.checked = on;
-        if (cbQuick) cbQuick.checked = on;
+        this._syncLayerInputs();
     },
 
     async toggleIconicLayer(iconicTaxonName, on) {
@@ -187,49 +253,25 @@ export const map = {
         const layerId = 'iconic_' + iconicTaxonName;
         if (on) {
             if (this._iconicLayers?.[layerId]) {
-                this._iconicLayers[layerId].addTo(this.map);
+                this._applyCommunityLayerVisibility();
+                this._syncLayerInputs();
                 return;
             }
             if (!this.app.inat || !this.pos.lat) return;
             this._iconicLayers = this._iconicLayers || {};
-            const obs = await this.app.inat.nearbyObservations(this.pos.lat, this.pos.lng, {
-                iconic: iconicTaxonName, limit: 50
-            });
-            const layer = L.layerGroup();
-            (obs || []).forEach(o => {
-                const lat = o.location?.split(',')[0];
-                const lng = o.location?.split(',')[1];
-                if (!lat || !lng) return;
-                const taxonId = o.taxon?.id;
-                const name = o.taxon?.preferred_common_name || o.taxon?.name || "Unknown";
-                const photo = o.photos?.[0]?.url?.replace("square", "small");
-                const squarePhoto = o.taxon?.default_photo?.square_url || o.photos?.[0]?.url || '';
-                const emoji = this.app.inat.iconicEmoji(o.taxon?.iconic_taxon_name || iconicTaxonName);
-                const imgHtml = photo ? "<img src='" + this._esc(photo) + "' class=\"com-pin-img\">" : "<div class=\"com-pin-emoji\">" + this._esc(emoji) + "</div>";
-                const icon = L.divIcon({
-                    className: "bg-transparent",
-                    html: "<div class=\"community-obs-pin\">" + imgHtml + "</div>",
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
+            if (this._communityObsLoaded) {
+                this._rebuildIconicLayerFromCommunity(iconicTaxonName);
+            } else {
+                const obs = await this.app.inat.nearbyObservations(this.pos.lat, this.pos.lng, {
+                    iconic: iconicTaxonName, limit: 50, days: 14
                 });
-                const marker = L.marker([parseFloat(lat), parseFloat(lng)], { icon }).addTo(layer);
-                const popupHtml = "<div class='com-popup'>" +
-                    (squarePhoto ? "<img src='" + this._esc(squarePhoto) + "' class='com-popup-img'>" : "<div class='com-popup-emoji'>" + this._esc(emoji) + "</div>") +
-                    "<div class='com-popup-body'>" +
-                    "<div class='com-popup-name'>" + this._esc(name) + "</div>" +
-                    "<div class='com-popup-meta'>" + this._esc(o.place_guess || "Nearby") + " · " + this._esc(o.observed_on || "") + "</div>" +
-                    (o.user?.login ? "<div class='com-popup-by'>@" + this._esc(o.user.login) + "</div>" : "") +
-                    (taxonId ? "<button onclick=\"app.ui.openSpeciesDetail(" + taxonId + ");\" class='com-popup-btn'>View Species ›</button>" : "") +
-                    "</div></div>";
-                marker.bindPopup(popupHtml, { maxWidth: 240, className: 'ede-popup' });
-            });
-            this._iconicLayers[layerId] = layer;
-            layer.addTo(this.map);
-        } else {
-            if (this._iconicLayers?.[layerId]) {
-                this.map.removeLayer(this._iconicLayers[layerId]);
+                const layer = L.layerGroup();
+                (obs || []).forEach(o => this._createCommunityMarker(o, layer));
+                this._iconicLayers[layerId] = layer;
             }
         }
+        this._applyCommunityLayerVisibility();
+        this._syncLayerInputs();
     },
 
     recenter() {
