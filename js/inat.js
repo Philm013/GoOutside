@@ -111,7 +111,7 @@ export const inat = {
                     rarity: c > 100 ? 'Common' : c > 20 ? 'Uncommon' : 'Rare',
                     dp: Math.round(c > 100 ? 50 : c > 20 ? 100 : 200)
                 };
-            }).filter(s => s.img || s.squareImg || s.iconic);
+            });
             return this._set(key, results);
         } catch (e) {
             console.error('inat.seasonalSpecies', e);
