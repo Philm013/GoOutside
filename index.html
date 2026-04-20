@@ -277,10 +277,20 @@
             <div id="discover-tabs" class="flex gap-2 overflow-x-auto p-3 hide-scrollbar">
                 <button class="discover-tab active" data-tab="nearby" onclick="app.ui.switchDiscoverTab('nearby')">🗺 Nearby</button>
                 <button class="discover-tab" data-tab="season" onclick="app.ui.switchDiscoverTab('season')">🌸 In Season</button>
-                <button class="discover-tab" data-tab="fish" onclick="app.ui.switchDiscoverTab('fish')">🐟 Fish</button>
-                <button class="discover-tab" data-tab="shells" onclick="app.ui.switchDiscoverTab('shells')">🐚 Shells</button>
                 <button class="discover-tab" data-tab="community" onclick="app.ui.switchDiscoverTab('community')">👥 Community</button>
                 <button class="discover-tab" data-tab="foryou" onclick="app.ui.switchDiscoverTab('foryou')">⭐ For You</button>
+            </div>
+            <!-- Season sub-filters: shown only when In Season tab is active -->
+            <div id="discover-season-filters" class="hidden flex gap-2 overflow-x-auto px-3 pb-2 hide-scrollbar">
+                <button class="season-filter-chip active" data-filter="" onclick="app.ui.setSeasonFilter(this, '')">All</button>
+                <button class="season-filter-chip" data-filter="Aves" onclick="app.ui.setSeasonFilter(this, 'Aves')">🐦 Birds</button>
+                <button class="season-filter-chip" data-filter="Plantae" onclick="app.ui.setSeasonFilter(this, 'Plantae')">🌿 Plants</button>
+                <button class="season-filter-chip" data-filter="Mammalia" onclick="app.ui.setSeasonFilter(this, 'Mammalia')">🦊 Mammals</button>
+                <button class="season-filter-chip" data-filter="Insecta" onclick="app.ui.setSeasonFilter(this, 'Insecta')">🦋 Insects</button>
+                <button class="season-filter-chip" data-filter="Actinopterygii" onclick="app.ui.setSeasonFilter(this, 'Actinopterygii')">🐟 Fish</button>
+                <button class="season-filter-chip" data-filter="Mollusca" onclick="app.ui.setSeasonFilter(this, 'Mollusca')">🐚 Shells</button>
+                <button class="season-filter-chip" data-filter="Reptilia" onclick="app.ui.setSeasonFilter(this, 'Reptilia')">🦎 Reptiles</button>
+                <button class="season-filter-chip" data-filter="Amphibia" onclick="app.ui.setSeasonFilter(this, 'Amphibia')">🐸 Amphibians</button>
             </div>
         </div>
         <div id="discover-body" class="flex-1 overflow-y-auto p-4 space-y-3 pb-nav content-start"></div>
@@ -293,37 +303,39 @@
             <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
         </header>
         <div class="flex-1 overflow-y-auto p-5 pb-nav">
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center">Choose an identification method</p>
-            <div class="grid grid-cols-1 gap-4 max-w-sm mx-auto">
+            <div class="grid grid-cols-1 gap-3 max-w-sm mx-auto">
                 <button onclick="app.ui.openAudioId()"
                     class="id-tool-card">
                     <div class="id-tool-icon">🎤</div>
-                    <div class="id-tool-title">Listen for Birds</div>
-                    <div class="id-tool-desc">Identify birds by sound using BirdNET AI — runs entirely on your device</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="id-tool-title">Listen for Birds</div>
+                        <div class="id-tool-desc">BirdNET AI identifies birds from audio — runs entirely on-device</div>
+                    </div>
                 </button>
                 <button onclick="app.ui.openKGModal()"
                     class="id-tool-card">
                     <div class="id-tool-icon">🔬</div>
-                    <div class="id-tool-title">Key It Out</div>
-                    <div class="id-tool-desc">Guided visual identification using key features and traits</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="id-tool-title">Key It Out</div>
+                        <div class="id-tool-desc">Guided ID using key visual features and traits</div>
+                    </div>
                 </button>
                 <button onclick="app.ui.openLogObservation()"
                     class="id-tool-card">
                     <div class="id-tool-icon">📸</div>
-                    <div class="id-tool-title">Log &amp; Document</div>
-                    <div class="id-tool-desc">Photograph and catalogue what you found in your journal</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="id-tool-title">Log &amp; Document</div>
+                        <div class="id-tool-desc">Photograph and catalogue what you found</div>
+                    </div>
                 </button>
             </div>
-            <div class="mt-6 p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/20">
-                <div class="text-sm font-bold text-brand mb-1">🔒 Fully On-Device</div>
-                <p class="text-xs text-gray-500 dark:text-gray-400">BirdNET audio analysis runs entirely in your browser using TensorFlow.js. No audio ever leaves your device. First use downloads the AI model (~50 MB); subsequent uses load instantly from cache.</p>
-            </div>
+            <p class="text-[10px] text-gray-400 text-center mt-4">🔒 BirdNET audio runs fully on-device. No audio leaves your browser.</p>
         </div>
     </div>
 
     <!-- 3. JOURNAL -->
     <div id="panel-journal" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
-        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+        <header id="journal-header" class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
             <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">My Journal</h2>
             <div class="flex gap-2">
                 <button onclick="app.ui.openLogObservation()"
@@ -765,6 +777,6 @@
      style="bottom: calc(var(--nav-h) + 8px)"></div>
 
 <!-- APP LOGIC -->
-<script type="module" src="js/app.js?v=20260419l"></script>
+<script type="module" src="js/app.js?v=20260419m"></script>
 </body>
 </html>

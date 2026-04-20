@@ -390,17 +390,16 @@ export const identify = {
             if (progressEl) progressEl.innerHTML = '';
             if (backBtn) backBtn.classList.add('hidden');
             body.innerHTML = `
-                <div class="text-center mb-6">
-                    <div class="text-4xl mb-2">🔬</div>
-                    <h3 class="text-xl font-black text-gray-900 dark:text-white mb-1">What did you find?</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Select a category to start the guided ID</p>
+                <div class="text-center mb-4">
+                    <h3 class="text-lg font-black text-gray-900 dark:text-white mb-0.5">What did you find?</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Pick a category to start</p>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-4 gap-2">
                     ${Object.entries(this.TRAIT_TREES).map(([k, v]) => `
                         <button onclick="app.identify.selectCategory('${k}')"
-                            class="kg-cat-btn flex flex-col items-center gap-2 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border-2 border-transparent hover:border-brand active:scale-95 transition-all">
-                            <span class="text-4xl">${v.icon}</span>
-                            <span class="font-bold text-sm text-gray-800 dark:text-white">${v.label}</span>
+                            class="kg-cat-btn flex flex-col items-center gap-1.5 py-3 px-1 rounded-2xl bg-gray-50 dark:bg-gray-800 border-2 border-transparent active:border-brand active:scale-95 transition-all">
+                            <span class="text-2xl leading-none">${v.icon}</span>
+                            <span class="font-bold text-[10px] text-gray-700 dark:text-gray-200 text-center leading-tight">${v.label}</span>
                         </button>
                     `).join('')}
                 </div>`;

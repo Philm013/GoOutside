@@ -161,18 +161,30 @@ export const ui = {
 
     async renderDiscover(tab) {
         this._setDiscoverTab(tab);
+        // Show/hide season sub-filters
+        const seasonFilters = document.getElementById('discover-season-filters');
+        if (seasonFilters) {
+            if (tab === 'season') seasonFilters.classList.add('show');
+            else seasonFilters.classList.remove('show');
+        }
         const el = document.getElementById('discover-body');
         if (!el) return;
         el.innerHTML = '<div class="flex items-center justify-center py-16 text-gray-400 gap-2"><span class="material-symbols-rounded animate-spin">progress_activity</span> Loading…</div>';
         const lat = this.app.map.pos?.lat || 40.71;
         const lng = this.app.map.pos?.lng || -74.00;
         if (tab === 'nearby') await this._renderNearby(el, lat, lng);
-        else if (tab === 'season') await this._renderInSeason(el, lat, lng);
-        else if (tab === 'fish') await this._renderInSeason(el, lat, lng, 'Actinopterygii');
-        else if (tab === 'shells') await this._renderInSeason(el, lat, lng, 'Mollusca');
+        else if (tab === 'season') await this._renderInSeason(el, lat, lng, this._seasonFilter || null);
         else if (tab === 'community') await this._renderCommunity(el, lat, lng);
         else if (tab === 'foryou') await this._renderForYou(el, lat, lng);
     },
+
+    setSeasonFilter(btn, filter) {
+        this._seasonFilter = filter || null;
+        document.querySelectorAll('.season-filter-chip').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        this.renderDiscover('season');
+    },
+
 
     async _renderNearby(el, lat, lng) {
         const obs = await this.app.inat.nearbyObservations(lat, lng, { limit: 40, days: 7 });
@@ -186,10 +198,8 @@ export const ui = {
         const species = await this.app.inat.seasonalSpecies(lat, lng, opts);
         if (!species.length) { el.innerHTML = this._emptyState('No seasonal data found for your location.'); return; }
         const season = this.app.data.currentSeason();
-        const label = iconicFilter === 'Actinopterygii' ? '🐟 Fish Active Near You' :
-                      iconicFilter === 'Mollusca' ? '🐚 Shells & Mollusks Near You' :
-                      season.icon + ' ' + season.name + ' — Species Active Near You';
-        el.innerHTML = '<div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">' + label + '</div>' +
+        const filterLabel = iconicFilter ? this.app.inat.iconicEmoji(iconicFilter) + ' ' + this.app.inat.iconicLabel(iconicFilter) + 's Near You' : season.icon + ' ' + season.name + ' — Species Active Near You';
+        el.innerHTML = '<div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">' + filterLabel + '</div>' +
             '<div class="grid grid-cols-2 gap-3">' + species.map(s => this._speciesCard(s)).join('') + '</div>';
     },
 
@@ -737,21 +747,25 @@ export const ui = {
         const statsWrap = document.getElementById('journal-stats-wrap');
         const filters = document.getElementById('journal-filter-bar');
         const timeline = document.getElementById('journal-timeline');
+        const header = document.getElementById('journal-header');
+        const searchBar = document.getElementById('journal-search-bar');
         if (!trigger || !expanded) return;
 
         trigger.classList.add('hidden');
         expanded.classList.remove('hidden');
         expanded.classList.add('flex');
 
+        if (header) header.classList.add('hidden');
         if (statsWrap) statsWrap.classList.add('hidden');
         if (filters) filters.classList.add('hidden');
         if (timeline) {
             timeline.classList.remove('grid-cols-2', 'gap-3');
             timeline.classList.add('grid-cols-1', 'gap-2');
         }
-
-        const searchBar = document.getElementById('journal-search-bar');
-        if (searchBar) searchBar.classList.add('border-b', 'border-gray-100', 'dark:border-gray-700');
+        if (searchBar) {
+            searchBar.classList.add('border-b', 'border-gray-100', 'dark:border-gray-700');
+            searchBar.classList.add('py-3');
+        }
 
         setTimeout(() => input?.focus(), 50);
     },
@@ -763,19 +777,22 @@ export const ui = {
         const statsWrap = document.getElementById('journal-stats-wrap');
         const filters = document.getElementById('journal-filter-bar');
         const timeline = document.getElementById('journal-timeline');
+        const header = document.getElementById('journal-header');
+        const searchBar = document.getElementById('journal-search-bar');
 
         if (input) input.value = '';
         if (trigger) trigger.classList.remove('hidden');
         if (expanded) { expanded.classList.add('hidden'); expanded.classList.remove('flex'); }
+        if (header) header.classList.remove('hidden');
         if (statsWrap) statsWrap.classList.remove('hidden');
         if (filters) filters.classList.remove('hidden');
         if (timeline) {
             timeline.classList.add('grid-cols-2', 'gap-3');
             timeline.classList.remove('grid-cols-1', 'gap-2');
         }
-
-        const searchBar = document.getElementById('journal-search-bar');
-        if (searchBar) searchBar.classList.remove('border-b', 'border-gray-100', 'dark:border-gray-700');
+        if (searchBar) {
+            searchBar.classList.remove('border-b', 'border-gray-100', 'dark:border-gray-700', 'py-3');
+        }
 
         input?.blur();
         this.app.journal._renderTimeline();

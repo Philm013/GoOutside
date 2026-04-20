@@ -746,13 +746,12 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
 }
 .species-discover-card:active { transform: scale(0.97); }
 .species-discover-img {
-    width: 100%; aspect-ratio: 1;
+    width: 100%; height: 110px;
     overflow: hidden;
     background: var(--brand-xlt);
-    position: relative;
+    flex-shrink: 0;
 }
 .species-discover-img img {
-    position: absolute; inset: 0;
     width: 100%; height: 100%; object-fit: cover;
     display: block;
 }
@@ -851,6 +850,27 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
     color: white;
     border-color: var(--brand);
 }
+.season-filter-chip {
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 11px; font-weight: 700;
+    color: #6b7280;
+    background: #f3f4f6;
+    border: 1.5px solid transparent;
+    white-space: nowrap;
+    transition: all 0.15s;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+@media (prefers-color-scheme: dark) {
+    .season-filter-chip { background: #374151; color: #9ca3af; }
+}
+.season-filter-chip.active {
+    background: var(--brand);
+    color: white;
+}
+#discover-season-filters { display: none; }
+#discover-season-filters.show { display: flex; }
 .obs-card {
     display: flex; gap: 12px; align-items: flex-start;
     background: var(--surface);
@@ -868,23 +888,24 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
 
 /* ── Identify Panel ───────────────────────────────────────────── */
 .id-tool-card {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 8px;
-    padding: 24px 16px;
+    display: flex; flex-direction: row; align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
     background: var(--surface);
-    border: 2px solid #e5e7eb;
-    border-radius: 20px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 18px;
     cursor: pointer;
     transition: all 0.15s;
+    text-align: left;
 }
 @media (prefers-color-scheme: dark) {
     .id-tool-card { background: #1f2a19; border-color: #374151; }
 }
 .id-tool-card:active { transform: scale(0.97); border-color: var(--brand); }
-.id-tool-icon { font-size: 48px; }
-.id-tool-title { font-size: 16px; font-weight: 800; color: #1f2937; }
+.id-tool-icon { font-size: 32px; line-height: 1; flex-shrink: 0; }
+.id-tool-title { font-size: 15px; font-weight: 800; color: #1f2937; }
 @media (prefers-color-scheme: dark) { .id-tool-title { color: #e5e7eb; } }
-.id-tool-desc { font-size: 12px; color: #6b7280; text-align: center; line-height: 1.4; }
+.id-tool-desc { font-size: 11px; color: #6b7280; line-height: 1.35; margin-top: 2px; }
 
 /* ── Profile ──────────────────────────────────────────────────── */
 .badge-card {
