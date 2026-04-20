@@ -148,7 +148,7 @@
             class="w-11 h-11 rounded-full glass-hud shadow-md flex items-center justify-center text-2xl active:scale-95 transition-transform border border-white/40">
             <span id="hud-avatar">🦋</span>
         </button>
-        <button onclick="app.ui.openPanel('map')" class="glass-hud px-3 py-1.5 rounded-2xl shadow-md active:scale-95 transition-transform">
+        <button onclick="app.ui.openPanel('panel-about')" class="glass-hud px-3 py-1.5 rounded-2xl shadow-md active:scale-95 transition-transform">
             <div class="text-[9px] font-black tracking-widest uppercase text-gray-400 dark:text-green-300/60">Earth Day</div>
             <div class="text-sm font-black text-brand dark:text-green-300" style="font-family:Sora,sans-serif">Everyday</div>
         </button>
@@ -444,7 +444,65 @@
         </div>
     </div>
 
-    <!-- 6. SPECIES DETAIL -->
+    <!-- 6. ABOUT -->
+    <div id="panel-about" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">About</h2>
+            <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </header>
+        <div class="flex-1 overflow-y-auto pb-nav">
+            <!-- Hero -->
+            <div class="bg-brand text-white px-6 py-10 text-center">
+                <div class="text-6xl mb-3">🌍</div>
+                <h1 class="text-3xl font-black mb-1" style="font-family:Sora,sans-serif">Earth Day Everyday</h1>
+                <p class="text-green-100 text-sm">Your nature companion — explore, learn &amp; catalogue the wild world around you.</p>
+            </div>
+
+            <div class="p-4 space-y-4">
+                <!-- Mission -->
+                <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                    <h3 class="font-bold text-sm text-brand mb-2">🌱 Our Mission</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">Earth Day Everyday turns every walk, hike, or backyard moment into a chance to connect with nature. Instead of hunting for points, you're building a personal record of the living world — one sighting at a time.</p>
+                </div>
+
+                <!-- Features -->
+                <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                    <h3 class="font-bold text-sm text-brand mb-3">✨ Features</h3>
+                    <div class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                        <div class="flex items-start gap-2"><span class="text-base">🗺️</span><span><strong>Live Map</strong> — see what's been spotted near you using iNaturalist community data</span></div>
+                        <div class="flex items-start gap-2"><span class="text-base">🌸</span><span><strong>In Season</strong> — discover which plants &amp; animals are active right now, locally</span></div>
+                        <div class="flex items-start gap-2"><span class="text-base">🔍</span><span><strong>Identify</strong> — BirdNET audio ID, knowledge graph trait matching, and iNaturalist species search</span></div>
+                        <div class="flex items-start gap-2"><span class="text-base">📓</span><span><strong>Journal</strong> — log and geo-tag your sightings with photos and notes</span></div>
+                        <div class="flex items-start gap-2"><span class="text-base">🏆</span><span><strong>Achievements</strong> — earn badges and level up as you catalogue the world around you</span></div>
+                    </div>
+                </div>
+
+                <!-- Data sources -->
+                <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                    <h3 class="font-bold text-sm text-brand mb-3">📡 Powered By</h3>
+                    <div class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                        <div class="flex items-center gap-2"><span class="text-base">🌿</span><a href="https://www.inaturalist.org" target="_blank" class="text-brand underline font-semibold">iNaturalist</a><span>— species observations &amp; identification data</span></div>
+                        <div class="flex items-center gap-2"><span class="text-base">🐦</span><a href="https://github.com/birdnet-team/real-time-pwa" target="_blank" class="text-brand underline font-semibold">BirdNET</a><span>— real-time in-browser bird audio ID</span></div>
+                        <div class="flex items-center gap-2"><span class="text-base">🗺️</span><span class="font-semibold">Leaflet + OpenStreetMap</span><span>— mapping</span></div>
+                    </div>
+                </div>
+
+                <!-- Privacy note -->
+                <div class="bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4 border border-amber-200 dark:border-amber-800">
+                    <h3 class="font-bold text-sm text-amber-700 dark:text-amber-400 mb-1">🔒 Privacy</h3>
+                    <p class="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">Your journal and sightings are stored locally on your device. Location is only used to load nearby species data — it is never sent to our servers.</p>
+                </div>
+
+                <!-- Version + links -->
+                <div class="text-center text-xs text-gray-400 pb-4 space-y-1">
+                    <div>Version 1.0 • Built with 💚 for planet Earth</div>
+                    <button onclick="app.ui.openPanel('panel-settings')" class="text-brand underline">Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. SPECIES DETAIL -->
     <div id="panel-species-detail" class="fixed inset-0 z-40 bg-surface-light dark:bg-surface-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
         <div class="absolute top-3 left-3 z-20">
             <button onclick="app.ui.closeSpeciesDetail()" class="w-10 h-10 bg-white/90 dark:bg-black/50 backdrop-blur rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform">
@@ -746,6 +804,6 @@
      style="bottom: calc(var(--nav-h) + 8px)"></div>
 
 <!-- APP LOGIC -->
-<script type="module" src="js/app.js?v=20260420b"></script>
+<script type="module" src="js/app.js?v=20260420c"></script>
 </body>
 </html>
