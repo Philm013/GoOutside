@@ -15,6 +15,26 @@ export const inat = {
         return data;
     },
 
+    normalizeIconicTaxon(iconic) {
+        const raw = String(iconic || '').trim();
+        if (!raw) return 'Animalia';
+        const key = raw.toLowerCase();
+        const map = {
+            aves: 'Aves', bird: 'Aves', birds: 'Aves',
+            plantae: 'Plantae', plant: 'Plantae', plants: 'Plantae',
+            mammalia: 'Mammalia', mammal: 'Mammalia', mammals: 'Mammalia',
+            insecta: 'Insecta', insect: 'Insecta', insects: 'Insecta',
+            reptilia: 'Reptilia', reptile: 'Reptilia', reptiles: 'Reptilia',
+            amphibia: 'Amphibia', amphibian: 'Amphibia', amphibians: 'Amphibia',
+            actinopterygii: 'Actinopterygii', fish: 'Actinopterygii', fishes: 'Actinopterygii',
+            mollusca: 'Mollusca', mollusk: 'Mollusca', mollusks: 'Mollusca', mollusc: 'Mollusca', molluscs: 'Mollusca', shell: 'Mollusca', shells: 'Mollusca',
+            arachnida: 'Arachnida', arachnid: 'Arachnida', arachnids: 'Arachnida', spider: 'Arachnida', spiders: 'Arachnida',
+            fungi: 'Fungi', fungus: 'Fungi',
+            animalia: 'Animalia', animal: 'Animalia', animals: 'Animalia'
+        };
+        return map[key] || raw;
+    },
+
     // Shared field sets
     OBS_FIELDS: [
         'id', 'uuid', 'observed_on', 'place_guess', 'location', 'description',
@@ -91,7 +111,7 @@ export const inat = {
                     rarity: c > 100 ? 'Common' : c > 20 ? 'Uncommon' : 'Rare',
                     dp: Math.round(c > 100 ? 50 : c > 20 ? 100 : 200)
                 };
-            }).filter(s => s.img);
+            });
             return this._set(key, results);
         } catch (e) {
             console.error('inat.seasonalSpecies', e);

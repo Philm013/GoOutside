@@ -268,7 +268,7 @@ export const ui = {
         const emoji = this.app.inat.iconicEmoji(s.iconic);
         const imgSrc = s.squareImg || s.img || '';
         const imgEl = imgSrc
-            ? '<img src="' + imgSrc + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\"w-full h-full flex items-center justify-center text-4xl bg-brand/5\\\">' + emoji + '</div>\'">'
+            ? '<img src="' + imgSrc + '" loading="lazy">'
             : '<div class="w-full h-full flex items-center justify-center text-4xl bg-brand/5">' + emoji + '</div>';
         const consBadge = s.conservationStatus ? this.app.inat.conservationBadge(s.conservationStatus) : null;
         return '<button onclick="app.ui.openSpeciesDetail(' + s.id + ')" class="species-discover-card">' +
@@ -313,7 +313,11 @@ export const ui = {
             this.app.inat.getTaxonIdSummary(taxonId)
         ]);
         if (!taxon) { content.innerHTML = '<div class="p-8 text-center text-gray-400">Species not found.</div>'; return; }
-        const heroImg = taxon.default_photo?.medium_url || taxon.taxon_photos?.[0]?.photo?.medium_url || '';
+        const recentNearby = (this.app._preloadedObs || []).find(o => o.taxon?.id === taxonId);
+        const recentNearbyPhoto = recentNearby?.photos?.[0]?.url?.replace('square', 'medium') || '';
+        const recentJournalPhoto = (this.app.state.observations || []).find(o => o.taxonId === taxonId)?.photo || '';
+        const recentPhoto = recentNearbyPhoto || recentJournalPhoto || '';
+        const heroImg = recentPhoto || taxon.default_photo?.medium_url || taxon.taxon_photos?.[0]?.photo?.medium_url || '';
         const commonName = taxon.preferred_common_name || taxon.name;
         const iconic = taxon.iconic_taxon_name;
         const cat = this.app.state.catalogue[taxonId];
@@ -324,12 +328,17 @@ export const ui = {
 
         // Build photo list for lightbox: hero + taxon_photos
         const allPhotos = [];
-        if (heroImg) allPhotos.push({ url: heroImg, thumb: taxon.default_photo?.square_url || heroImg });
+        const pushPhoto = (url, thumb) => {
+            if (!url || allPhotos.some(p => p.url === url)) return;
+            allPhotos.push({ url, thumb: thumb || url });
+        };
+        pushPhoto(recentPhoto, recentNearby?.photos?.[0]?.url || recentPhoto);
+        pushPhoto(heroImg, taxon.default_photo?.square_url || heroImg);
         if (taxon.taxon_photos) {
             taxon.taxon_photos.forEach((tp, i) => {
                 const url = tp.photo.medium_url || tp.photo.url || '';
                 const thumb = tp.photo.square_url || tp.photo.url || '';
-                if (url && !(i === 0 && heroImg)) allPhotos.push({ url, thumb });
+                if (url && !(i === 0 && heroImg)) pushPhoto(url, thumb);
             });
         }
         // Serialize photo list for inline onclick
@@ -771,7 +780,6 @@ export const ui = {
 
         if (header) header.classList.add('hidden');
         if (statsWrap) statsWrap.classList.add('hidden');
-        if (filters) filters.classList.add('hidden');
         if (timeline) {
             timeline.classList.remove('grid-cols-2', 'gap-3');
             timeline.classList.add('grid-cols-1', 'gap-2');
@@ -799,7 +807,6 @@ export const ui = {
         if (expanded) { expanded.classList.add('hidden'); expanded.classList.remove('flex'); }
         if (header) header.classList.remove('hidden');
         if (statsWrap) statsWrap.classList.remove('hidden');
-        if (filters) filters.classList.remove('hidden');
         if (timeline) {
             timeline.classList.add('grid-cols-2', 'gap-3');
             timeline.classList.remove('grid-cols-1', 'gap-2');

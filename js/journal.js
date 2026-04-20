@@ -287,6 +287,7 @@ export const journal = {
         if (!el) return;
         const search = (document.getElementById('journal-search')?.value || '').toLowerCase();
         const filter = document.querySelector('.journal-filter-btn.active')?.dataset.filter || 'all';
+        const activeFilter = filter === 'all' ? 'all' : this.app.inat.normalizeIconicTaxon(filter);
 
         let filtered = obs;
         if (search) filtered = filtered.filter(o =>
@@ -294,7 +295,9 @@ export const journal = {
             (o.notes || '').toLowerCase().includes(search) ||
             (o.habitat || '').toLowerCase().includes(search)
         );
-        if (filter !== 'all') filtered = filtered.filter(o => (o.iconic || '').toLowerCase() === filter.toLowerCase());
+        if (activeFilter !== 'all') {
+            filtered = filtered.filter(o => this.app.inat.normalizeIconicTaxon(o.iconic) === activeFilter);
+        }
 
         if (!filtered.length) {
             el.innerHTML = `<div class="col-span-2 text-center py-12 text-gray-400">
@@ -331,7 +334,7 @@ export const journal = {
     getTaxaBreakdown() {
         const counts = {};
         for (const o of this.app.state.observations) {
-            const k = o.iconic || 'Animalia';
+            const k = this.app.inat.normalizeIconicTaxon(o.iconic);
             counts[k] = (counts[k] || 0) + 1;
         }
         return Object.entries(counts)

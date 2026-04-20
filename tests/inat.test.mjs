@@ -165,7 +165,7 @@ describe('inat.seasonalSpecies() result shaping', () => {
                             id: 11, name: 'No Photo Plant',
                             preferred_common_name: 'No Photo',
                             iconic_taxon_name: 'Plantae',
-                            default_photo: null  // should be filtered out
+                            default_photo: null
                         }
                     }
                 ]
@@ -175,13 +175,17 @@ describe('inat.seasonalSpecies() result shaping', () => {
 
     test('shapes results to expected format', async () => {
         const results = await inat.seasonalSpecies(40.0, -74.0);
-        assert.equal(results.length, 2); // no-photo filtered out
+        assert.equal(results.length, 3);
         assert.equal(results[0].name, 'American Robin');
         assert.equal(results[0].sciName, 'Turdus migratorius');
         assert.equal(results[0].id, 9);
         assert.equal(results[0].iconic, 'Aves');
         assert.equal(results[0].img, 'https://x.com/med.jpg');
         assert.equal(results[0].squareImg, 'https://x.com/sq.jpg');
+        const noPhoto = results.find(s => s.id === 11);
+        assert.equal(noPhoto.name, 'No Photo');
+        assert.equal(noPhoto.img, undefined);
+        assert.equal(noPhoto.squareImg, undefined);
     });
 
     test('count > 100 => Common, dp=50', async () => {
