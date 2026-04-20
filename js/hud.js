@@ -258,7 +258,28 @@ export const hud = {
         positionMapControls(initTop, false);
     },
 
+    // Escapes text for safe insertion into innerHTML strings
+    _esc(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    },
+
     async refreshHomeSheet() {
+        if (this._refreshLock) return;
+        this._refreshLock = true;
+        try {
+            await this._doRefreshHomeSheet();
+        } finally {
+            this._refreshLock = false;
+        }
+    },
+
+    async _doRefreshHomeSheet() {
         const el = document.getElementById("home-sheet-content");
         if (!el) return;
         const s = this.app.state;
@@ -267,19 +288,16 @@ export const hud = {
         const sppCount = Object.keys(s.catalogue || {}).length;
         const season = this.app.data.currentSeason();
 
-        let spotlight = [];
-        if (this.app.map && this.app.map.pos.lat) {
-            spotlight = await this.app.inat.spotlight(this.app.map.pos.lat, this.app.map.pos.lng);
-        } else {
-            spotlight = (this.app.localSpecies || []).slice(0, 8);
-        }
+        // Use already-loaded localSpecies — no extra network call
+        const allSp = this.app.localSpecies || [];
+        let spotlight = allSp.filter(s => s.rarity !== 'Common').slice(0, 8);
+        if (spotlight.length < 3) spotlight = allSp.slice(0, 8);
 
         // ── Next badge to unlock ──────────────────────────────────
         const earnedSet = new Set(s.badges || []);
         const nextBadge = this.app.data.BADGES.find(b => !earnedSet.has(b.id));
         let achievementHtml = '';
         if (nextBadge) {
-            // Compute progress for this badge
             const prog = this._badgeProgress(nextBadge, s);
             const pct = Math.min(100, Math.round(prog.curr / prog.max * 100));
             achievementHtml =
@@ -287,8 +305,8 @@ export const hud = {
                 '<button onclick="app.hud.peekHomeSheet(); app.ui.openPanel(\'panel-profile\')" class="hs-achievement-card">' +
                     '<div class="hs-achievement-icon">' + nextBadge.icon + '</div>' +
                     '<div class="hs-achievement-body">' +
-                        '<div class="hs-achievement-name">' + nextBadge.name + '</div>' +
-                        '<div class="hs-achievement-desc">' + nextBadge.desc + '</div>' +
+                        '<div class="hs-achievement-name">' + this._esc(nextBadge.name) + '</div>' +
+                        '<div class="hs-achievement-desc">' + this._esc(nextBadge.desc) + '</div>' +
                         '<div class="hs-achievement-bar-wrap">' +
                             '<div class="hs-achievement-bar" style="width:' + pct + '%"></div>' +
                         '</div>' +
@@ -306,7 +324,7 @@ export const hud = {
                 recentBadgeHtml =
                     '<div class="hs-recent-badge">' +
                         '<span class="hs-recent-badge-icon">' + lastBadge.icon + '</span>' +
-                        '<span class="hs-recent-badge-text">Recently earned: <strong>' + lastBadge.name + '</strong></span>' +
+                        '<span class="hs-recent-badge-text">Recently earned: <strong>' + this._esc(lastBadge.name) + '</strong></span>' +
                         '<button onclick="app.hud.peekHomeSheet(); app.ui.openPanel(\'panel-profile\')" class="hs-recent-badge-btn">View</button>' +
                     '</div>';
             }
@@ -321,16 +339,16 @@ export const hud = {
                 const taxonId = obs.taxon?.id;
                 const imgUrl = obs.taxon?.default_photo?.square_url
                     || (obs.photos?.[0]?.url ? obs.photos[0].url.replace('square', 'square') : '');
-                const emoji = app.inat.iconicEmoji(obs.taxon?.iconic_taxon_name);
+                const emoji = this.app.inat.iconicEmoji(obs.taxon?.iconic_taxon_name);
                 const when = obs.observed_on ? this._relativeDate(obs.observed_on) : '';
                 const imgEl = imgUrl
-                    ? '<img src="' + imgUrl + '" class="hs-nearby-img" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+                    ? '<img src="' + this._esc(imgUrl) + '" class="hs-nearby-img" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
                       '<div class="hs-nearby-emoji" style="display:none">' + emoji + '</div>'
                     : '<div class="hs-nearby-emoji">' + emoji + '</div>';
                 return '<button onclick="app.hud.peekHomeSheet(); app.ui.openSpeciesDetail(' + taxonId + ')" class="hs-nearby-card">' +
                     '<div class="hs-nearby-img-wrap">' + imgEl + '</div>' +
-                    '<div class="hs-nearby-name">' + name + '</div>' +
-                    '<div class="hs-nearby-when">' + when + '</div>' +
+                    '<div class="hs-nearby-name">' + this._esc(name) + '</div>' +
+                    '<div class="hs-nearby-when">' + this._esc(when) + '</div>' +
                 '</button>';
             }).join('');
             nearbySightingsHtml =
@@ -338,6 +356,7 @@ export const hud = {
                 '<div class="hs-species-row">' + cards + '</div>';
         }
 
+        const self = this;
         el.innerHTML =
             '<div class="hs-today-row">' +
                 '<div class="hs-today-stat"><span class="hs-today-num">' + todayObs + '</span><span class="hs-today-label">Today</span></div>' +
@@ -348,18 +367,20 @@ export const hud = {
             '</div>' +
             recentBadgeHtml +
             nearbySightingsHtml +
-            '<div class="hs-section-title">' + season.icon + ' In Your Area · ' + season.name + '</div>' +
+            '<div class="hs-section-title">' + season.icon + ' In Your Area · ' + this._esc(season.name) + '</div>' +
             '<div class="hs-species-row">' +
                 spotlight.slice(0, 8).map(function(sp) {
-                    const emoji = app.inat.iconicEmoji(sp.iconic);
-                    const imgEl = (sp.squareImg || sp.img)
-                        ? '<img src="' + (sp.squareImg || sp.img) + '" class="hs-species-img" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+                    const emoji = self.app.inat.iconicEmoji(sp.iconic);
+                    const imgSrc = sp.squareImg || sp.img || '';
+                    const imgEl = imgSrc
+                        ? '<img src="' + self._esc(imgSrc) + '" class="hs-species-img" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
                           '<div class="hs-species-emoji" style="display:none">' + emoji + '</div>'
                         : '<div class="hs-species-emoji">' + emoji + '</div>';
+                    const rarityClass = sp.rarity === 'Common' ? 'rarity-common' : sp.rarity === 'Uncommon' ? 'rarity-uncommon' : 'rarity-rare';
                     return '<button onclick="app.hud.peekHomeSheet(); app.ui.openSpeciesDetail(' + sp.id + ')" class="hs-species-card">' +
                         '<div class="hs-species-img-wrap">' + imgEl + '</div>' +
-                        '<div class="hs-species-name">' + sp.name + '</div>' +
-                        '<div class="hs-species-rarity ' + (sp.rarity === 'Common' ? 'rarity-common' : sp.rarity === 'Uncommon' ? 'rarity-uncommon' : 'rarity-rare') + '">' + sp.rarity + '</div>' +
+                        '<div class="hs-species-name">' + self._esc(sp.name) + '</div>' +
+                        '<div class="hs-species-rarity ' + rarityClass + '">' + self._esc(sp.rarity) + '</div>' +
                     '</button>';
                 }).join('') +
             '</div>' +

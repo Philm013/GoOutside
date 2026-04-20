@@ -61,7 +61,9 @@ export const map = {
         const { lat, lng } = this.pos;
         this.app.localSpecies = await this.app.inat.seasonalSpecies(lat, lng, { limit: 200 });
         this._loadCommunityObs();
-        this.app.hud.refreshHomeSheet();
+        // Refresh home sheet only after init completes (app.init already calls it once;
+        // this handles the case where GPS arrives late after init finishes)
+        if (this.app._initDone) this.app.hud.refreshHomeSheet();
     },
 
     async _loadCommunityObs() {

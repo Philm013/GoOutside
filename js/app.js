@@ -1,11 +1,11 @@
-import { haptics } from './haptics.js?v=20260419i';
-import { hud } from './hud.js?v=20260419i';
-import { ui } from './ui.js?v=20260419i';
-import { data } from './data.js?v=20260419i';
-import { map } from './map.js?v=20260419i';
-import { inat } from './inat.js?v=20260419i';
-import { identify } from './identify.js?v=20260419i';
-import { journal } from './journal.js?v=20260419i';
+import { haptics } from './haptics.js?v=20260419j';
+import { hud } from './hud.js?v=20260419j';
+import { ui } from './ui.js?v=20260419j';
+import { data } from './data.js?v=20260419j';
+import { map } from './map.js?v=20260419j';
+import { inat } from './inat.js?v=20260419j';
+import { identify } from './identify.js?v=20260419j';
+import { journal } from './journal.js?v=20260419j';
 
 const app = {
     state: {},
@@ -93,6 +93,7 @@ const app = {
         }
 
         setProgress(100, 'Ready to explore! 🌍');
+        this._initDone = true;
 
         // ── 8. Show launch button — user taps to enter ──────────────
         const btn = document.getElementById('loading-launch-btn');
