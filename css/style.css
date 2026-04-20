@@ -465,6 +465,33 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
 }
 
 /* ── Home Sheet ───────────────────────────────────────────────── */
+/* Backdrop: tap to collapse sheet */
+#home-sheet-backdrop {
+    position: fixed; inset: 0;
+    z-index: 24; /* just below home-sheet z-25 */
+    background: transparent;
+    pointer-events: none;
+    transition: background 0.3s ease;
+}
+#home-sheet-backdrop.active { pointer-events: auto; }
+
+/* Expand row: shows collapse hint when sheet is open */
+#home-sheet-expand-row {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 0 0 6px;
+    pointer-events: none;
+}
+#home-sheet:not(.is-dock) #home-sheet-expand-row { display: flex; }
+#home-sheet-close-hint {
+    font-size: 20px;
+    color: #c5c9c2;
+    transition: color 0.2s;
+}
+#home-sheet-handle:active #home-sheet-close-hint { color: var(--brand-lt); }
+@media (prefers-color-scheme: dark) { #home-sheet-close-hint { color: #4b5563; } }
+
 #home-sheet {
     position: fixed;
     left: 0; right: 0; bottom: 0;
@@ -486,6 +513,10 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
     cursor: grab;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    /* Clicks on dock-bar children should not bubble to the handle toggle */
+}
+#home-sheet-dock-bar {
+    pointer-events: auto; /* clicks handled inside */
 }
 #home-sheet-handle:active { cursor: grabbing; }
 #home-sheet-handle-bar {

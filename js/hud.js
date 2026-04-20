@@ -71,6 +71,11 @@ export const hud = {
         this._snapTo('dock');
     },
 
+    toggleHomeSheet() {
+        if (this._snapState === 'dock') this._snapTo('peek');
+        else this._snapTo('dock');
+    },
+
     _initHomeSheet() {
         const sheet   = document.getElementById("home-sheet");
         const handle  = document.getElementById("home-sheet-handle");
@@ -93,6 +98,8 @@ export const hud = {
         // ── Apply dock/expanded class for CSS ───────────────────────────
         const applyClass = (state) => {
             sheet.classList.toggle('is-dock', state === 'dock');
+            const backdrop = document.getElementById('home-sheet-backdrop');
+            if (backdrop) backdrop.classList.toggle('active', state !== 'dock');
         };
 
         // ── Content scroll: only allowed at full ────────────────────────
@@ -199,10 +206,11 @@ export const hud = {
             begin(e.touches[0].clientY);
         }, { passive: true });
 
-        // ── Tap on handle to open from dock ─────────────────────────────
+        // ── Tap on handle to toggle sheet open/closed ───────────────────
         handle.addEventListener('click', () => {
             if (dragSuppressClick) return;
             if (this._snapState === 'dock') this._snapTo('peek');
+            else this._snapTo('dock');
         });
 
         // ── Touch on content when at top + open (drag-to-close) ─────────
@@ -248,6 +256,10 @@ export const hud = {
         };
         window.addEventListener('resize', reposition);
         document.addEventListener('fullscreenchange', reposition);
+
+        // ── Backdrop click collapses sheet ──────────────────────────────
+        const backdrop = document.getElementById('home-sheet-backdrop');
+        if (backdrop) backdrop.addEventListener('click', () => this._snapTo('dock'));
 
         // ── Initial state: dock ──────────────────────────────────────────
         this._snapState = 'dock';

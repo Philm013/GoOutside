@@ -217,10 +217,17 @@
     </div>
 </div>
 
+<!-- ══ HOME BOTTOM SHEET BACKDROP (tap to collapse) ═══════════ -->
+<div id="home-sheet-backdrop"></div>
+
 <!-- ══ HOME BOTTOM SHEET ══════════════════════════════════════ -->
 <div id="home-sheet">
     <div id="home-sheet-handle">
         <div id="home-sheet-handle-bar"></div>
+        <!-- Close pill: visible when sheet is expanded (non-dock) -->
+        <div id="home-sheet-expand-row">
+            <span id="home-sheet-close-hint" class="material-symbols-rounded">expand_more</span>
+        </div>
         <!-- Compact dock bar: only shown in dock state via .is-dock class on #home-sheet -->
         <div id="home-sheet-dock-bar">
             <div class="dock-avatar" id="dock-avatar">🌿</div>
@@ -306,7 +313,7 @@
                 <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
             </div>
         </header>
-        <div class="px-4 pt-3 shrink-0">
+        <div id="journal-stats-wrap" class="px-4 pt-3 shrink-0">
             <div id="journal-stats"></div>
         </div>
         <!-- Collapsible search bar -->
@@ -320,13 +327,17 @@
             </button>
             <!-- Expanded: live input + cancel -->
             <div id="journal-search-expanded" class="hidden items-center gap-2">
+                <span class="material-symbols-rounded text-gray-400 text-base shrink-0">search</span>
                 <input id="journal-search" type="text" placeholder="Search observations…"
                     oninput="app.journal._renderTimeline()"
-                    class="flex-1 bg-gray-100 dark:bg-gray-800 pl-4 pr-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand dark:text-white">
-                <button onclick="app.ui.closeJournalSearch()" class="text-brand font-bold text-sm px-2 shrink-0 active:opacity-70">Cancel</button>
+                    class="flex-1 bg-transparent py-2.5 text-sm outline-none dark:text-white">
+                <button onclick="app.ui.closeJournalSearch()"
+                    class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 active:bg-gray-200 transition-colors">
+                    <span class="material-symbols-rounded text-base text-gray-500">close</span>
+                </button>
             </div>
         </div>
-        <div class="bg-surface-light dark:bg-surface-dark border-b border-gray-100 dark:border-gray-700 shrink-0">
+        <div id="journal-filter-bar" class="bg-surface-light dark:bg-surface-dark border-b border-gray-100 dark:border-gray-700 shrink-0">
             <div id="journal-filter-tabs" class="flex gap-2 overflow-x-auto p-3 hide-scrollbar">
                 <button class="journal-filter-btn active" data-filter="all" onclick="app.ui.setJournalFilter(this)">All</button>
                 <button class="journal-filter-btn" data-filter="Aves" onclick="app.ui.setJournalFilter(this)">🐦 Birds</button>
@@ -734,6 +745,6 @@
      style="bottom: calc(var(--nav-h) + 8px)"></div>
 
 <!-- APP LOGIC -->
-<script type="module" src="js/app.js?v=20260419j"></script>
+<script type="module" src="js/app.js?v=20260419k"></script>
 </body>
 </html>

@@ -36,6 +36,8 @@ export const ui = {
             if (id === 'panel-discover') this.renderDiscover('nearby');
         } else {
             document.getElementById('nav-map')?.classList.add('active');
+            // Reset journal search when leaving journal panel
+            this.closeJournalSearch();
         }
         // Top bar: transparent + glass on map, solid on panels
         const topBar = document.getElementById('top-bar');
@@ -689,15 +691,13 @@ export const ui = {
     },
 
     openJournalSearch() {
-        const panel = document.getElementById('panel-journal');
         const trigger = document.getElementById('journal-search-trigger');
         const expanded = document.getElementById('journal-search-expanded');
         const input = document.getElementById('journal-search');
-        const stats = document.getElementById('journal-stats');
-        const statsWrap = stats?.closest('.px-4.pt-3');
-        const filters = document.querySelector('#panel-journal .bg-surface-light.border-b');
+        const statsWrap = document.getElementById('journal-stats-wrap');
+        const filters = document.getElementById('journal-filter-bar');
         const timeline = document.getElementById('journal-timeline');
-        if (!panel || !trigger || !expanded) return;
+        if (!trigger || !expanded) return;
 
         trigger.classList.add('hidden');
         expanded.classList.remove('hidden');
@@ -720,9 +720,8 @@ export const ui = {
         const trigger = document.getElementById('journal-search-trigger');
         const expanded = document.getElementById('journal-search-expanded');
         const input = document.getElementById('journal-search');
-        const stats = document.getElementById('journal-stats');
-        const statsWrap = stats?.closest('.px-4.pt-3');
-        const filters = document.querySelector('#panel-journal .bg-surface-light.border-b');
+        const statsWrap = document.getElementById('journal-stats-wrap');
+        const filters = document.getElementById('journal-filter-bar');
         const timeline = document.getElementById('journal-timeline');
 
         if (input) input.value = '';
