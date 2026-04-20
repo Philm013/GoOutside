@@ -164,8 +164,12 @@ export const ui = {
         // Show/hide season sub-filters
         const seasonFilters = document.getElementById('discover-season-filters');
         if (seasonFilters) {
-            if (tab === 'season') seasonFilters.classList.add('show');
-            else seasonFilters.classList.remove('show');
+            if (tab === 'season') {
+                seasonFilters.classList.add('show');
+                if (!seasonFilters.children.length) this._renderSeasonFilterChips(seasonFilters);
+            } else {
+                seasonFilters.classList.remove('show');
+            }
         }
         const el = document.getElementById('discover-body');
         if (!el) return;
@@ -176,6 +180,16 @@ export const ui = {
         else if (tab === 'season') await this._renderInSeason(el, lat, lng, this._seasonFilter || null);
         else if (tab === 'community') await this._renderCommunity(el, lat, lng);
         else if (tab === 'foryou') await this._renderForYou(el, lat, lng);
+    },
+
+    _renderSeasonFilterChips(container) {
+        const inat = this.app.inat;
+        const cur = this._seasonFilter || '';
+        const chips = [['', 'All'], ...this.ICONIC_TAXA.map(t => [t, inat.iconicEmoji(t) + ' ' + inat.iconicLabel(t)])];
+        container.innerHTML = chips.map(([val, label]) =>
+            `<button class="season-filter-chip${val === cur ? ' active' : ''}" data-filter="${val}"
+                onclick="app.ui.setSeasonFilter(this,'${val}')">${label}</button>`
+        ).join('');
     },
 
     setSeasonFilter(btn, filter) {
@@ -601,7 +615,7 @@ export const ui = {
     _renderSpeciesSelectorTabs() {
         const el = document.getElementById('species-selector-tabs');
         if (!el) return;
-        const groups = ['All', 'Aves', 'Plantae', 'Mammalia', 'Insecta', 'Reptilia', 'Amphibia', 'Actinopterygii', 'Mollusca'];
+        const groups = ['All', ...this.ICONIC_TAXA];
         el.innerHTML = groups.map(g => {
             const filter = g === 'All' ? 'all' : g;
             const isActive = this.selectorActiveFilter === filter;
@@ -858,6 +872,13 @@ export const ui = {
         }, 600);
     },
 
+    // Central taxa list — single source of truth for all taxa-related UI
+    ICONIC_TAXA: [
+        'Aves', 'Plantae', 'Mammalia', 'Insecta',
+        'Reptilia', 'Amphibia', 'Actinopterygii', 'Mollusca',
+        'Arachnida', 'Fungi'
+    ],
+
     toggleLayerPicker() {
         const picker = document.getElementById('map-layer-picker');
         const btn = document.getElementById('map-layer-toggle');
@@ -865,27 +886,72 @@ export const ui = {
         const isOpen = !picker.classList.contains('hidden');
         if (isOpen) {
             picker.classList.add('hidden');
-            if (btn) btn.classList.remove('ring-2', 'ring-brand');
-        } else {
-            picker.classList.remove('hidden');
-            if (btn) btn.classList.add('ring-2', 'ring-brand');
-            // Close when tapping elsewhere
-            setTimeout(() => {
-                const close = (e) => {
-                    if (!picker.contains(e.target) && e.target !== btn) {
-                        picker.classList.add('hidden');
-                        if (btn) btn.classList.remove('ring-2', 'ring-brand');
-                    }
-                    document.removeEventListener('touchstart', close);
-                    document.removeEventListener('click', close);
-                };
-                document.addEventListener('touchstart', close, { once: true });
-                document.addEventListener('click', close, { once: true });
-            }, 50);
+            if (btn) { btn.classList.remove('bg-brand', 'text-white'); btn.classList.add('bg-white', 'dark:bg-surface-dark', 'text-gray-600', 'dark:text-gray-300'); }
+            return;
         }
+        // Render content each open so state is current
+        this._renderLayerPicker(picker);
+        picker.classList.remove('hidden');
+        if (btn) { btn.classList.add('bg-brand', 'text-white'); btn.classList.remove('bg-white', 'dark:bg-surface-dark', 'text-gray-600', 'dark:text-gray-300'); }
+        // Close when tapping outside (after 150ms to avoid same-tap close)
+        setTimeout(() => {
+            const close = (e) => {
+                if (btn && (e.target === btn || btn.contains(e.target))) return;
+                if (!picker.contains(e.target)) {
+                    picker.classList.add('hidden');
+                    if (btn) { btn.classList.remove('bg-brand', 'text-white'); btn.classList.add('bg-white', 'dark:bg-surface-dark', 'text-gray-600', 'dark:text-gray-300'); }
+                }
+            };
+            document.addEventListener('touchstart', close, { once: true });
+            document.addEventListener('click', close, { once: true });
+        }, 150);
     },
 
-    // Keep for backwards compatibility / settings panel
+    _renderLayerPicker(picker) {
+        const inat = this.app.inat;
+        const mapObj = this.app.map;
+        const commOn = mapObj._communityLayerOn !== false;
+        const persOn = mapObj._personalLayerOn !== false;
+        const iconicState = mapObj._iconicLayerState || {};
+
+        const taxaRows = this.ICONIC_TAXA.map(t => {
+            const on = iconicState[t] || false;
+            return `<label class="flex items-center justify-between py-1.5 gap-2 cursor-pointer">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-base leading-none shrink-0">${inat.iconicEmoji(t)}</span>
+                    <span class="text-sm font-medium dark:text-white truncate">${inat.iconicLabel(t)}s</span>
+                </div>
+                <input type="checkbox" ${on ? 'checked' : ''}
+                    onchange="app.map.toggleIconicLayer('${t}', this.checked)"
+                    class="w-4 h-4 accent-brand shrink-0">
+            </label>`;
+        }).join('');
+
+        picker.innerHTML = `
+            <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">My Layers</div>
+            <label class="flex items-center justify-between py-1.5 gap-2 cursor-pointer">
+                <div class="flex items-center gap-2">
+                    <div class="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0"></div>
+                    <span class="text-sm font-medium dark:text-white">All Sightings</span>
+                </div>
+                <input type="checkbox" id="quick-toggle-community" ${commOn ? 'checked' : ''}
+                    onchange="app.map.toggleCommunityLayer(this.checked)"
+                    class="w-4 h-4 accent-brand shrink-0">
+            </label>
+            <label class="flex items-center justify-between py-1.5 gap-2 cursor-pointer mb-2">
+                <div class="flex items-center gap-2">
+                    <div class="w-2.5 h-2.5 rounded-full bg-brand shrink-0"></div>
+                    <span class="text-sm font-medium dark:text-white">My Sightings</span>
+                </div>
+                <input type="checkbox" id="quick-toggle-personal" ${persOn ? 'checked' : ''}
+                    onchange="app.map.togglePersonalLayer(this.checked)"
+                    class="w-4 h-4 accent-brand shrink-0">
+            </label>
+            <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">By Type</div>
+            ${taxaRows}`;
+    },
+
+    // Keep for backwards compatibility
     toggleMapLayers() { this.toggleLayerPicker(); },
 
     confirmClearData() {

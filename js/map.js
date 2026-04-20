@@ -147,6 +147,7 @@ export const map = {
     },
 
     toggleCommunityLayer(on) {
+        this._communityLayerOn = on;
         const cb = document.getElementById('toggle-community-layer');
         const cbQuick = document.getElementById('quick-toggle-community');
         if (on) {
@@ -159,6 +160,7 @@ export const map = {
     },
 
     togglePersonalLayer(on) {
+        this._personalLayerOn = on;
         const cb = document.getElementById('toggle-personal-layer');
         const cbQuick = document.getElementById('quick-toggle-personal');
         if (on) {
@@ -171,6 +173,8 @@ export const map = {
     },
 
     async toggleIconicLayer(iconicTaxonName, on) {
+        if (!this._iconicLayerState) this._iconicLayerState = {};
+        this._iconicLayerState[iconicTaxonName] = on;
         const layerId = 'iconic_' + iconicTaxonName;
         if (on) {
             if (this._iconicLayers?.[layerId]) {
@@ -180,7 +184,7 @@ export const map = {
             if (!this.app.inat || !this.pos.lat) return;
             this._iconicLayers = this._iconicLayers || {};
             const obs = await this.app.inat.nearbyObservations(this.pos.lat, this.pos.lng, {
-                iconic: iconicTaxonName, perPage: 50
+                iconic: iconicTaxonName, limit: 50
             });
             const layer = L.layerGroup();
             (obs || []).forEach(o => {

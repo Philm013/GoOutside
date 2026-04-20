@@ -184,54 +184,16 @@
         <div class="w-11 h-11 rounded-2xl glass-hud shadow-md flex items-center justify-center overflow-hidden">
             <div id="compass-needle" class="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[14px] border-b-red-500 transition-transform"></div>
         </div>
-        <!-- Layer picker toggle -->
-        <div class="relative">
-            <button id="map-layer-toggle" onclick="app.ui.toggleLayerPicker()"
-                class="w-11 h-11 bg-white dark:bg-surface-dark rounded-2xl shadow-lg flex items-center justify-center text-gray-600 dark:text-gray-300 active:scale-95 transition-transform border border-gray-100 dark:border-gray-700">
-                <span class="material-symbols-rounded text-xl">layers</span>
-            </button>
-            <!-- Floating layer picker -->
-            <div id="map-layer-picker" class="hidden absolute right-13 bottom-0 w-52 bg-white dark:bg-surface-dark rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 p-3 pointer-events-auto"
-                 style="right: calc(100% + 10px)">
-                <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Map Layers</div>
-                <label class="flex items-center justify-between py-2 cursor-pointer">
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full bg-blue-400 shrink-0"></div>
-                        <span class="text-sm font-medium dark:text-white">Community</span>
-                    </div>
-                    <input type="checkbox" id="quick-toggle-community" checked
-                        onchange="app.map.toggleCommunityLayer(this.checked)"
-                        class="w-4 h-4 accent-brand">
-                </label>
-                <label class="flex items-center justify-between py-2 cursor-pointer">
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm">🐟</span>
-                        <span class="text-sm font-medium dark:text-white">Fish</span>
-                    </div>
-                    <input type="checkbox" id="quick-toggle-fish"
-                        onchange="app.map.toggleIconicLayer('Actinopterygii', this.checked)"
-                        class="w-4 h-4 accent-brand">
-                </label>
-                <label class="flex items-center justify-between py-2 cursor-pointer">
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm">🐚</span>
-                        <span class="text-sm font-medium dark:text-white">Shells</span>
-                    </div>
-                    <input type="checkbox" id="quick-toggle-shells"
-                        onchange="app.map.toggleIconicLayer('Mollusca', this.checked)"
-                        class="w-4 h-4 accent-brand">
-                </label>
-                <label class="flex items-center justify-between py-2 cursor-pointer">
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full bg-brand shrink-0"></div>
-                        <span class="text-sm font-medium dark:text-white">My Sightings</span>
-                    </div>
-                    <input type="checkbox" id="quick-toggle-personal" checked
-                        onchange="app.map.togglePersonalLayer(this.checked)"
-                        class="w-4 h-4 accent-brand">
-                </label>
+            <!-- Layer picker toggle -->
+            <div class="relative">
+                <button id="map-layer-toggle" onclick="app.ui.toggleLayerPicker()"
+                    class="w-11 h-11 bg-white dark:bg-surface-dark rounded-2xl shadow-lg flex items-center justify-center text-gray-600 dark:text-gray-300 active:scale-95 transition-all border border-gray-100 dark:border-gray-700">
+                    <span class="material-symbols-rounded text-xl">layers</span>
+                </button>
+                <!-- Floating layer picker — content rendered dynamically by ui.js -->
+                <div id="map-layer-picker" class="hidden absolute bg-white dark:bg-surface-dark rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 p-3 pointer-events-auto overflow-y-auto"
+                     style="right: calc(100% + 10px); bottom: 0; width: 200px; max-height: 70vh"></div>
             </div>
-        </div>
     </div>
 </div>
 
@@ -280,18 +242,8 @@
                 <button class="discover-tab" data-tab="community" onclick="app.ui.switchDiscoverTab('community')">👥 Community</button>
                 <button class="discover-tab" data-tab="foryou" onclick="app.ui.switchDiscoverTab('foryou')">⭐ For You</button>
             </div>
-            <!-- Season sub-filters: shown only when In Season tab is active -->
-            <div id="discover-season-filters" class="hidden flex gap-2 overflow-x-auto px-3 pb-2 hide-scrollbar">
-                <button class="season-filter-chip active" data-filter="" onclick="app.ui.setSeasonFilter(this, '')">All</button>
-                <button class="season-filter-chip" data-filter="Aves" onclick="app.ui.setSeasonFilter(this, 'Aves')">🐦 Birds</button>
-                <button class="season-filter-chip" data-filter="Plantae" onclick="app.ui.setSeasonFilter(this, 'Plantae')">🌿 Plants</button>
-                <button class="season-filter-chip" data-filter="Mammalia" onclick="app.ui.setSeasonFilter(this, 'Mammalia')">🦊 Mammals</button>
-                <button class="season-filter-chip" data-filter="Insecta" onclick="app.ui.setSeasonFilter(this, 'Insecta')">🦋 Insects</button>
-                <button class="season-filter-chip" data-filter="Actinopterygii" onclick="app.ui.setSeasonFilter(this, 'Actinopterygii')">🐟 Fish</button>
-                <button class="season-filter-chip" data-filter="Mollusca" onclick="app.ui.setSeasonFilter(this, 'Mollusca')">🐚 Shells</button>
-                <button class="season-filter-chip" data-filter="Reptilia" onclick="app.ui.setSeasonFilter(this, 'Reptilia')">🦎 Reptiles</button>
-                <button class="season-filter-chip" data-filter="Amphibia" onclick="app.ui.setSeasonFilter(this, 'Amphibia')">🐸 Amphibians</button>
-            </div>
+            <!-- Season sub-filters: rendered dynamically by ui.js _renderSeasonFilterChips() -->
+            <div id="discover-season-filters" class="hidden flex gap-2 overflow-x-auto px-3 pb-2 hide-scrollbar"></div>
         </div>
         <div id="discover-body" class="flex-1 overflow-y-auto p-4 space-y-3 pb-nav content-start"></div>
     </div>
@@ -376,6 +328,12 @@
                 <button class="journal-filter-btn" data-filter="Plantae" onclick="app.ui.setJournalFilter(this)">🌿 Plants</button>
                 <button class="journal-filter-btn" data-filter="Mammalia" onclick="app.ui.setJournalFilter(this)">🦊 Mammals</button>
                 <button class="journal-filter-btn" data-filter="Insecta" onclick="app.ui.setJournalFilter(this)">🦋 Insects</button>
+                <button class="journal-filter-btn" data-filter="Reptilia" onclick="app.ui.setJournalFilter(this)">🦎 Reptiles</button>
+                <button class="journal-filter-btn" data-filter="Amphibia" onclick="app.ui.setJournalFilter(this)">🐸 Amphibians</button>
+                <button class="journal-filter-btn" data-filter="Actinopterygii" onclick="app.ui.setJournalFilter(this)">🐟 Fish</button>
+                <button class="journal-filter-btn" data-filter="Mollusca" onclick="app.ui.setJournalFilter(this)">🐚 Shells</button>
+                <button class="journal-filter-btn" data-filter="Arachnida" onclick="app.ui.setJournalFilter(this)">🕷️ Spiders</button>
+                <button class="journal-filter-btn" data-filter="Fungi" onclick="app.ui.setJournalFilter(this)">🍄 Fungi</button>
             </div>
         </div>
         <div id="journal-timeline" class="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3 pb-nav content-start"></div>
@@ -460,13 +418,24 @@
             <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
                 <h3 class="font-bold text-sm mb-3">🗺 Map Layers</h3>
                 <label class="flex items-center justify-between py-2 cursor-pointer">
-                    <span class="text-sm dark:text-white">Show Community Observations</span>
+                    <span class="text-sm dark:text-white">All Community Sightings</span>
                     <input id="toggle-community-layer" type="checkbox" checked onchange="app.map.toggleCommunityLayer(this.checked)" class="w-5 h-5 accent-brand">
                 </label>
                 <label class="flex items-center justify-between py-2 cursor-pointer">
-                    <span class="text-sm dark:text-white">Show My Sightings</span>
+                    <span class="text-sm dark:text-white">My Sightings</span>
                     <input id="toggle-personal-layer" type="checkbox" checked onchange="app.map.togglePersonalLayer(this.checked)" class="w-5 h-5 accent-brand">
                 </label>
+                <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-3 mb-1">By Type</div>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐦 Birds</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Aves',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🌿 Plants</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Plantae',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦊 Mammals</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Mammalia',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦋 Insects</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Insecta',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦎 Reptiles</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Reptilia',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐸 Amphibians</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Amphibia',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐟 Fish</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Actinopterygii',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐚 Shells</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Mollusca',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🕷️ Spiders</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Arachnida',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🍄 Fungi</span><input type="checkbox" onchange="app.map.toggleIconicLayer('Fungi',this.checked)" class="w-5 h-5 accent-brand"></label>
             </div>
             <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
                 <h3 class="font-bold text-sm text-red-600 mb-3">⚠️ Data</h3>
@@ -777,6 +746,6 @@
      style="bottom: calc(var(--nav-h) + 8px)"></div>
 
 <!-- APP LOGIC -->
-<script type="module" src="js/app.js?v=20260419m"></script>
+<script type="module" src="js/app.js?v=20260420a"></script>
 </body>
 </html>
