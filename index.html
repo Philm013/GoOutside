@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Earth Day Everyday</title>
+
+    <!-- PWA manifest & theme -->
+    <link rel="manifest" href="/GoOutside/manifest.json">
+    <meta name="theme-color" content="#2d6a4f">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Explore, identify, and celebrate the nature around you — every day.">
+
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EDE">
+    <link rel="apple-touch-icon" href="/GoOutside/icons/apple-touch-icon.png">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/GoOutside/icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/GoOutside/icons/favicon-16.png">
+
+    <!-- Open Graph (share cards) -->
+    <meta property="og:title" content="Earth Day Everyday">
+    <meta property="og:description" content="Explore, identify, and celebrate the nature around you — every day.">
+    <meta property="og:image" content="https://philm013.github.io/GoOutside/icons/icon-512.png">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- Tailwind CSS (compiled) -->
+    <link rel="stylesheet" href="css/tailwind.css">
+
+    <!-- Libraries -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <script>
+        if (typeof Capacitor === 'undefined' || !Capacitor.isNativePlatform()) {
+            window.Capacitor = {
+                isNativePlatform: () => false,
+                Plugins: {
+                    Haptics: { impact: () => {} },
+                    Geolocation: {
+                        async requestPermissions() { return { location: 'granted' }; },
+                        watchPosition(opts, cb) {
+                            return navigator.geolocation.watchPosition(p => cb(p, null), e => cb(null, e), opts);
+                        }
+                    },
+                    Camera: {
+                        async getPhoto() {
+                            return new Promise((res) => {
+                                const inp = document.getElementById('file-upload-input');
+                                if (inp) { inp.click(); }
+                                res(null);
+                            });
+                        }
+                    }
+                }
+            };
+        }
+    </script>
+</head>
+<body class="bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 font-sans select-none antialiased">
+
+<!-- ══ LOADING SCREEN ═════════════════════════════════════════ -->
+<div id="loading-screen">
+    <!-- Ambient floating background emojis -->
+    <div id="loading-orbs" aria-hidden="true">
+        <span class="orb orb-1">🌿</span>
+        <span class="orb orb-2">🦋</span>
+        <span class="orb orb-3">🌸</span>
+        <span class="orb orb-4">🦜</span>
+        <span class="orb orb-5">🍄</span>
+        <span class="orb orb-6">🌱</span>
+        <span class="orb orb-7">🦊</span>
+        <span class="orb orb-8">🐸</span>
+    </div>
+
+    <div id="loading-inner">
+
+        <!-- ① Earth orbit -->
+        <div id="loading-orbit-wrap" aria-hidden="true">
+            <div id="loading-logo">🌍</div>
+            <div class="orbit-ring" id="orbit-ring">
+                <span class="orbit-item" style="--i:0">🌿</span>
+                <span class="orbit-item" style="--i:1">🦋</span>
+                <span class="orbit-item" style="--i:2">🌸</span>
+                <span class="orbit-item" style="--i:3">🦜</span>
+                <span class="orbit-item" style="--i:4">🍄</span>
+                <span class="orbit-item" style="--i:5">🌱</span>
+                <span class="orbit-item" style="--i:6">🦊</span>
+                <span class="orbit-item" style="--i:7">🐸</span>
+            </div>
+        </div>
+
+        <!-- ② Brand -->
+        <h1 id="loading-title">Earth Day<br>Everyday</h1>
+        <p id="loading-tagline">Every day is a chance to discover nature.</p>
+
+        <!-- ③ Progress -->
+        <div id="loading-progress-section">
+            <div id="loading-progress-wrap">
+                <div id="loading-progress-bar"></div>
+            </div>
+            <p id="loading-status">Starting up…</p>
+        </div>
+
+        <!-- ④ Locally sighted species showcase (hidden until data loads) -->
+        <div id="loading-species-showcase">
+            <p id="loading-showcase-label">
+                <span class="loading-showcase-icon">📍</span> Spotted Nearby
+            </p>
+            <div id="loading-showcase-card">
+                <div id="loading-showcase-img" aria-hidden="true">🌱</div>
+                <div id="loading-showcase-info">
+                    <p id="loading-showcase-name">Scanning local area…</p>
+                    <p id="loading-showcase-sci"></p>
+                    <p id="loading-showcase-meta"></p>
+                </div>
+            </div>
+            <div id="loading-showcase-dots"></div>
+        </div>
+
+        <!-- ⑤ Rotating nature quote -->
+        <p id="loading-flavor"></p>
+
+        <!-- ⑥ Launch -->
+        <button id="loading-launch-btn" class="hidden" onclick="app._launchFromSplash()">
+            <span class="material-symbols-rounded">eco</span> Start Exploring
+        </button>
+
+    </div>
+</div>
+
+<!-- ══ TOP STATUS BAR ════════════════════════════════════════════ -->
+<div id="top-bar" class="is-map">
+    <!-- Avatar + brand -->
+    <div class="flex gap-2 items-center">
+        <button onclick="app.ui.openPanel('panel-profile')"
+            class="w-11 h-11 rounded-full glass-hud shadow-md flex items-center justify-center text-2xl active:scale-95 transition-transform border border-white/40">
+            <span id="hud-avatar">🦋</span>
+        </button>
+        <button onclick="app.ui.openPanel('panel-about')" class="glass-hud px-3 py-1.5 rounded-2xl shadow-md active:scale-95 transition-transform">
+            <div class="text-[9px] font-black tracking-widest uppercase text-gray-400 dark:text-green-300/60">Earth Day</div>
+            <div class="text-sm font-black text-brand dark:text-green-300" style="font-family:Sora,sans-serif">Everyday</div>
+        </button>
+    </div>
+
+    <!-- Stats bar + party + fullscreen -->
+    <div class="glass-hud px-3 py-1.5 rounded-2xl shadow-md flex items-center gap-2">
+        <div id="hud-stats-bar" class="flex items-center gap-3 text-xs font-bold">
+            <span class="hud-stat">🌸 Spring</span>
+            <span class="hud-stat text-brand">🌍 Lv.1</span>
+            <span class="hud-stat">🔥 0</span>
+        </div>
+        <!-- Party button — shows badge when connected -->
+        <button id="hud-party-btn" onclick="app.ui.openPanel('panel-party')"
+            class="relative w-7 h-7 rounded-lg bg-white/60 dark:bg-black/30 flex items-center justify-center active:scale-90 transition-transform">
+            <span class="material-symbols-rounded text-sm text-gray-600 dark:text-gray-300">group</span>
+            <span id="hud-party-badge" class="hidden absolute -top-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></span>
+        </button>
+        <!-- Fullscreen — hidden in PWA standalone mode -->
+        <button id="hud-fullscreen-btn" onclick="app.hud.toggleFullscreen()"
+            class="w-7 h-7 rounded-lg bg-white/60 dark:bg-black/30 flex items-center justify-center active:scale-90 transition-transform">
+            <span class="material-symbols-rounded text-sm text-gray-600 dark:text-gray-300">fullscreen</span>
+        </button>
+    </div>
+</div>
+
+<!-- ══ MAP LAYER ══════════════════════════════════════════════ -->
+<div id="map" class="fixed inset-0 z-0 bg-gray-200 dark:bg-gray-900"></div>
+
+<!-- ══ HUD LAYER (map controls only) ════════════════════════════ -->
+<div class="fixed inset-0 z-[30] pointer-events-none">
+
+    <!-- Recenter + compass + layers -->
+    <div class="absolute right-3 pointer-events-auto flex flex-col gap-2 transition-all duration-300"
+         id="map-controls">
+        <button onclick="app.map.recenter()"
+            class="w-11 h-11 bg-white dark:bg-surface-dark rounded-2xl shadow-lg flex items-center justify-center text-brand active:scale-95 transition-transform border border-gray-100 dark:border-gray-700">
+            <span class="material-symbols-rounded text-2xl">my_location</span>
+        </button>
+        <div class="w-11 h-11 rounded-2xl glass-hud shadow-md flex items-center justify-center overflow-hidden">
+            <div id="compass-needle" class="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[14px] border-b-red-500 transition-transform"></div>
+        </div>
+            <!-- Layer picker toggle -->
+            <div class="relative">
+                <button id="map-layer-toggle" onclick="app.ui.toggleLayerPicker()"
+                    class="w-11 h-11 bg-white dark:bg-surface-dark rounded-2xl shadow-lg flex items-center justify-center text-gray-600 dark:text-gray-300 active:scale-95 transition-all border border-gray-100 dark:border-gray-700">
+                    <span class="material-symbols-rounded text-xl">layers</span>
+                </button>
+                <!-- Floating layer picker — content rendered dynamically by ui.js -->
+                <div id="map-layer-picker" class="hidden absolute bg-white dark:bg-surface-dark rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 p-3 pointer-events-auto overflow-y-auto"
+                     style="right: calc(100% + 10px); bottom: 0; width: 200px; max-height: 70vh"></div>
+            </div>
+    </div>
+</div>
+
+<!-- ══ HOME BOTTOM SHEET BACKDROP (tap to collapse) ═══════════ -->
+<div id="home-sheet-backdrop"></div>
+
+<!-- ══ HOME BOTTOM SHEET ══════════════════════════════════════ -->
+<div id="home-sheet">
+    <div id="home-sheet-handle">
+        <div id="home-sheet-handle-bar"></div>
+        <!-- Close pill: visible when sheet is expanded (non-dock) -->
+        <div id="home-sheet-expand-row">
+            <span id="home-sheet-close-hint" class="material-symbols-rounded">expand_more</span>
+        </div>
+        <!-- Compact dock bar: only shown in dock state via .is-dock class on #home-sheet -->
+        <div id="home-sheet-dock-bar">
+            <div class="dock-avatar" id="dock-avatar">🌿</div>
+            <div class="dock-info">
+                <div class="dock-summary" id="dock-summary">Earth Day Everyday</div>
+                <div class="dock-stats" id="dock-stats-line">Tap to explore nature nearby</div>
+            </div>
+            <span class="material-symbols-rounded dock-chevron">expand_less</span>
+        </div>
+    </div>
+    <div id="home-sheet-content">
+        <!-- Filled by hud.refreshHomeSheet() -->
+        <div class="flex items-center justify-center py-8 text-gray-400">
+            <span class="material-symbols-rounded animate-spin mr-2">progress_activity</span> Loading…
+        </div>
+    </div>
+</div>
+
+<!-- ══ PANELS CONTAINER ════════════════════════════════════════ -->
+<div id="panels-container" class="fixed left-0 right-0 bottom-0 z-20 pointer-events-none">
+
+    <!-- 1. DISCOVER -->
+    <div id="panel-discover" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">Discover</h2>
+            <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </header>
+        <div class="bg-surface-light dark:bg-surface-dark border-b border-gray-100 dark:border-gray-700 shrink-0">
+            <div id="discover-tabs" class="flex gap-2 overflow-x-auto p-3 hide-scrollbar">
+                <button class="discover-tab active" data-tab="nearby" onclick="app.ui.switchDiscoverTab('nearby')">🗺 Nearby</button>
+                <button class="discover-tab" data-tab="season" onclick="app.ui.switchDiscoverTab('season')">🌸 In Season</button>
+                <button class="discover-tab" data-tab="community" onclick="app.ui.switchDiscoverTab('community')">👥 Community</button>
+                <button class="discover-tab" data-tab="foryou" onclick="app.ui.switchDiscoverTab('foryou')">⭐ For You</button>
+            </div>
+            <!-- Season sub-filters: rendered dynamically by ui.js _renderSeasonFilterChips() -->
+            <div id="discover-season-filters" class="hidden flex gap-2 overflow-x-auto px-3 pb-2 hide-scrollbar"></div>
+        </div>
+        <div id="discover-body" class="flex-1 overflow-y-auto p-4 space-y-3 pb-nav content-start"></div>
+    </div>
+
+    <!-- 2. IDENTIFY -->
+    <div id="panel-identify" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">Identify</h2>
+            <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-5 pb-nav">
+            <div class="grid grid-cols-1 gap-3 max-w-sm mx-auto">
+                <button onclick="app.ui.openAudioId()"
+                    class="id-tool-card">
+                    <div class="id-tool-icon">🎤</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="id-tool-title">Listen for Birds</div>
+                        <div class="id-tool-desc">BirdNET AI identifies birds from audio — runs entirely on-device</div>
+                    </div>
+                </button>
+                <button onclick="app.ui.openKGModal()"
+                    class="id-tool-card">
+                    <div class="id-tool-icon">🔬</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="id-tool-title">Key It Out</div>
+                        <div class="id-tool-desc">Guided ID using key visual features and traits</div>
+                    </div>
+                </button>
+                <button onclick="app.ui.openLogObservation()"
+                    class="id-tool-card">
+                    <div class="id-tool-icon">📸</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="id-tool-title">Log &amp; Document</div>
+                        <div class="id-tool-desc">Photograph and catalogue what you found</div>
+                    </div>
+                </button>
+            </div>
+            <p class="text-[10px] text-gray-400 text-center mt-4">🔒 BirdNET audio runs fully on-device. No audio leaves your browser.</p>
+        </div>
+    </div>
+
+    <!-- 3. JOURNAL -->
+    <div id="panel-journal" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header id="journal-header" class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">My Journal</h2>
+            <div class="flex gap-2">
+                <button onclick="app.ui.openLogObservation()"
+                    class="h-9 px-3 rounded-full bg-brand text-white flex items-center gap-1.5 text-sm font-bold active:scale-95 transition-transform shadow-sm">
+                    <span class="material-symbols-rounded text-base">add</span> Log
+                </button>
+                <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+            </div>
+        </header>
+        <div id="journal-stats-wrap" class="px-4 pt-3 shrink-0">
+            <div id="journal-stats"></div>
+        </div>
+        <!-- Collapsible search bar -->
+        <div id="journal-search-bar" class="shrink-0 bg-surface-light dark:bg-surface-dark px-4 py-2 border-b border-transparent dark:border-transparent">
+            <!-- Collapsed: tappable hint -->
+            <button id="journal-search-trigger" onclick="app.ui.openJournalSearch()"
+                class="w-full flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-2.5 text-gray-400 text-sm text-left active:bg-gray-200 transition-colors">
+                <span class="material-symbols-rounded text-base">search</span>
+                <span class="flex-1">Search observations…</span>
+                <span id="journal-entry-count" class="text-[10px] font-bold text-gray-300 dark:text-gray-600"></span>
+            </button>
+            <!-- Expanded: live input + cancel -->
+            <div id="journal-search-expanded" class="hidden items-center gap-2">
+                <span class="material-symbols-rounded text-gray-400 text-base shrink-0">search</span>
+                <input id="journal-search" type="text" placeholder="Search observations…"
+                    oninput="app.journal._renderTimeline()"
+                    class="flex-1 bg-transparent py-2.5 text-sm outline-none dark:text-white">
+                <button onclick="app.ui.closeJournalSearch()"
+                    class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 active:bg-gray-200 transition-colors">
+                    <span class="material-symbols-rounded text-base text-gray-500">close</span>
+                </button>
+            </div>
+        </div>
+        <div id="journal-filter-bar" class="bg-surface-light dark:bg-surface-dark border-b border-gray-100 dark:border-gray-700 shrink-0">
+            <div id="journal-filter-tabs" class="flex gap-2 overflow-x-auto p-3 hide-scrollbar">
+                <button class="journal-filter-btn active" data-filter="all" onclick="app.ui.setJournalFilter(this)">All</button>
+                <button class="journal-filter-btn" data-filter="Aves" onclick="app.ui.setJournalFilter(this)">🐦 Birds</button>
+                <button class="journal-filter-btn" data-filter="Plantae" onclick="app.ui.setJournalFilter(this)">🌿 Plants</button>
+                <button class="journal-filter-btn" data-filter="Mammalia" onclick="app.ui.setJournalFilter(this)">🦊 Mammals</button>
+                <button class="journal-filter-btn" data-filter="Insecta" onclick="app.ui.setJournalFilter(this)">🦋 Insects</button>
+                <button class="journal-filter-btn" data-filter="Reptilia" onclick="app.ui.setJournalFilter(this)">🦎 Reptiles</button>
+                <button class="journal-filter-btn" data-filter="Amphibia" onclick="app.ui.setJournalFilter(this)">🐸 Amphibians</button>
+                <button class="journal-filter-btn" data-filter="Actinopterygii" onclick="app.ui.setJournalFilter(this)">🐟 Fish</button>
+                <button class="journal-filter-btn" data-filter="Mollusca" onclick="app.ui.setJournalFilter(this)">🐚 Shells</button>
+                <button class="journal-filter-btn" data-filter="Arachnida" onclick="app.ui.setJournalFilter(this)">🕷️ Spiders</button>
+                <button class="journal-filter-btn" data-filter="Fungi" onclick="app.ui.setJournalFilter(this)">🍄 Fungi</button>
+            </div>
+        </div>
+        <div id="journal-timeline" class="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3 pb-nav content-start"></div>
+    </div>
+
+    <!-- 4. PROFILE -->
+    <div id="panel-profile" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">My Profile</h2>
+            <div class="flex gap-2">
+                <button onclick="app.ui.toggleProfileEdit()" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">edit</span></button>
+                <button onclick="app.ui.openPanel('panel-settings')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">settings</span></button>
+                <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+            </div>
+        </header>
+        <div class="flex-1 overflow-y-auto pb-nav">
+            <!-- Avatar + name -->
+            <div class="flex flex-col items-center py-6 bg-gradient-to-b from-brand/10 to-transparent">
+                <div id="profile-avatar-container" class="w-24 h-24 bg-white dark:bg-gray-700 rounded-full border-4 border-brand shadow-lg flex items-center justify-center text-5xl mb-3 cursor-pointer active:scale-95 transition-transform" onclick="app.ui.animateAvatar()">
+                    <span id="profile-avatar-emoji"></span>
+                </div>
+                <div id="username-container" class="flex justify-center items-center">
+                    <h3 id="profile-username" class="text-2xl font-black text-center dark:text-white px-4"></h3>
+                </div>
+                <div id="profile-title" class="mt-2 bg-brand text-white px-4 py-1 rounded-full text-xs font-bold shadow-sm"></div>
+            </div>
+
+            <!-- Avatar selection -->
+            <div id="avatar-selection-container" class="hidden bg-surface-light dark:bg-surface-dark mx-4 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
+                <div class="text-xs font-black uppercase tracking-wider text-gray-500 mb-3">Choose Avatar</div>
+                <div id="avatar-options" class="grid grid-cols-6 gap-2"></div>
+            </div>
+
+            <!-- XP / Level -->
+            <div class="mx-4 mb-4 bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <div class="flex justify-between text-xs font-bold mb-2">
+                    <span class="text-brand" id="profile-level-label">Lv.1 — Curious Naturalist</span>
+                    <span class="text-gray-400" id="profile-dp-text">0 DP</span>
+                </div>
+                <div class="h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div id="profile-xp-fill" class="h-full bg-gradient-to-r from-brand to-emerald-400 rounded-full transition-all duration-700"></div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-3 gap-3 px-4 mb-6">
+                <div class="bg-surface-light dark:bg-surface-dark p-3 rounded-xl border border-gray-100 dark:border-gray-700 text-center">
+                    <div class="text-xl font-black text-brand" id="stat-obs">0</div>
+                    <div class="text-[10px] font-bold text-gray-500 uppercase">Obs</div>
+                </div>
+                <div class="bg-surface-light dark:bg-surface-dark p-3 rounded-xl border border-gray-100 dark:border-gray-700 text-center">
+                    <div class="text-xl font-black text-amber-500" id="stat-spp">0</div>
+                    <div class="text-[10px] font-bold text-gray-500 uppercase">Species</div>
+                </div>
+                <div class="bg-surface-light dark:bg-surface-dark p-3 rounded-xl border border-gray-100 dark:border-gray-700 text-center">
+                    <div class="text-xl font-black text-orange-500" id="stat-streak">0</div>
+                    <div class="text-[10px] font-bold text-gray-500 uppercase">Streak</div>
+                </div>
+            </div>
+
+            <!-- Badges -->
+            <div class="px-4 mb-6">
+                <h3 class="text-sm font-black uppercase tracking-wider text-gray-800 dark:text-white mb-3">Badges</h3>
+                <div id="badges-grid" class="grid grid-cols-3 gap-3"></div>
+            </div>
+
+            <!-- Taxa breakdown -->
+            <div class="mx-4 mb-6 bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <h3 class="text-sm font-bold text-gray-800 dark:text-white mb-3">My Wildlife Breakdown</h3>
+                <div id="taxa-breakdown" class="space-y-2"></div>
+            </div>
+
+            <!-- Party button -->
+            <div class="px-4 mb-6">
+                <button onclick="app.ui.openPanel('panel-party')" class="w-full bg-brand text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 shadow-md">
+                    <span class="material-symbols-rounded">group</span> Explore Together
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. SETTINGS -->
+    <div id="panel-settings" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">Settings</h2>
+            <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-nav">
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-sm mb-3">🗺 Map Layers</h3>
+                <label class="flex items-center justify-between py-2 cursor-pointer">
+                    <span class="text-sm dark:text-white">All Community Sightings</span>
+                    <input id="toggle-community-layer" type="checkbox" checked onchange="app.map.toggleCommunityLayer(this.checked)" class="w-5 h-5 accent-brand">
+                </label>
+                <label class="flex items-center justify-between py-2 cursor-pointer">
+                    <span class="text-sm dark:text-white">My Sightings</span>
+                    <input id="toggle-personal-layer" type="checkbox" checked onchange="app.map.togglePersonalLayer(this.checked)" class="w-5 h-5 accent-brand">
+                </label>
+                <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-3 mb-1">By Type</div>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐦 Birds</span><input type="checkbox" data-iconic-toggle="Aves" onchange="app.map.toggleIconicLayer('Aves',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🌿 Plants</span><input type="checkbox" data-iconic-toggle="Plantae" onchange="app.map.toggleIconicLayer('Plantae',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦊 Mammals</span><input type="checkbox" data-iconic-toggle="Mammalia" onchange="app.map.toggleIconicLayer('Mammalia',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦋 Insects</span><input type="checkbox" data-iconic-toggle="Insecta" onchange="app.map.toggleIconicLayer('Insecta',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🦎 Reptiles</span><input type="checkbox" data-iconic-toggle="Reptilia" onchange="app.map.toggleIconicLayer('Reptilia',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐸 Amphibians</span><input type="checkbox" data-iconic-toggle="Amphibia" onchange="app.map.toggleIconicLayer('Amphibia',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐟 Fish</span><input type="checkbox" data-iconic-toggle="Actinopterygii" onchange="app.map.toggleIconicLayer('Actinopterygii',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🐚 Shells</span><input type="checkbox" data-iconic-toggle="Mollusca" onchange="app.map.toggleIconicLayer('Mollusca',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🕷️ Spiders</span><input type="checkbox" data-iconic-toggle="Arachnida" onchange="app.map.toggleIconicLayer('Arachnida',this.checked)" class="w-5 h-5 accent-brand"></label>
+                <label class="flex items-center justify-between py-1.5 cursor-pointer"><span class="text-sm dark:text-white">🍄 Fungi</span><input type="checkbox" data-iconic-toggle="Fungi" onchange="app.map.toggleIconicLayer('Fungi',this.checked)" class="w-5 h-5 accent-brand"></label>
+            </div>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-sm text-red-600 mb-3">⚠️ Data</h3>
+                <button onclick="app.ui.confirmClearData()" class="w-full bg-red-50 dark:bg-red-900/20 text-red-600 py-2.5 rounded-xl font-bold text-sm active:scale-95 border border-red-200 dark:border-red-800">Clear All Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PARTY -->
+    <div id="panel-party" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">🌿 Explore Together</h2>
+                <span id="sync-pending-badge" class="hidden text-[10px] font-black bg-amber-400 text-white px-2 py-0.5 rounded-full">0 pending</span>
+            </div>
+            <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </header>
+        <!-- Party tabs -->
+        <div class="flex border-b border-gray-100 dark:border-gray-700 shrink-0">
+            <button class="party-tab active flex-1 py-2.5 text-sm font-bold" data-tab="connect" onclick="app.multiplayer.switchPartyTab('connect')">Connect</button>
+            <button class="party-tab flex-1 py-2.5 text-sm font-bold" data-tab="friends" onclick="app.multiplayer.switchPartyTab('friends')">Friends</button>
+            <button class="party-tab flex-1 py-2.5 text-sm font-bold" data-tab="session" onclick="app.multiplayer.switchPartyTab('session')">Session</button>
+        </div>
+        <!-- Tab: Connect -->
+        <div id="party-tab-connect" class="flex-1 overflow-y-auto p-4 space-y-4 pb-nav">
+            <!-- My code -->
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Your Explorer Code</div>
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 text-center">
+                        <span id="my-peer-id" class="text-4xl font-black tracking-widest text-brand" style="font-family:Sora,sans-serif">????</span>
+                    </div>
+                    <button onclick="app.multiplayer.copyId()" class="w-12 h-12 bg-brand text-white rounded-2xl flex items-center justify-center active:scale-90 shadow-md">
+                        <span class="material-symbols-rounded">content_copy</span>
+                    </button>
+                </div>
+                <p class="text-xs text-gray-400 text-center mt-2">Share this code with friends to explore together</p>
+                <input id="session-name-input" placeholder="Session name (optional)" class="mt-3 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand dark:text-white">
+            </div>
+
+            <!-- Rejoin last party -->
+            <button id="rejoin-party-btn" class="hidden w-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 py-2.5 rounded-2xl font-bold text-sm active:scale-95"></button>
+
+            <!-- Connection controls -->
+            <div id="host-controls">
+                <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Join a Party</div>
+                <div class="flex gap-2">
+                    <input id="target-peer-id" maxlength="9" placeholder="XXXX-XXXX"
+                        oninput="(()=>{let v=this.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase().substring(0,8);this.value=v.length>4?v.slice(0,4)+'-'+v.slice(4):v;})()"
+                        class="flex-1 text-center text-2xl font-black tracking-widest uppercase bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-2xl p-3 outline-none focus:border-brand dark:text-white">
+                    <button onclick="app.multiplayer.joinParty()" class="px-5 bg-brand text-white rounded-2xl font-bold active:scale-95 shadow-md">
+                        Join
+                    </button>
+                </div>
+            </div>
+
+            <div id="connected-controls" class="hidden">
+                <button onclick="app.multiplayer.disconnect()" class="w-full bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-200 dark:border-red-800 py-3 rounded-2xl font-bold active:scale-95">
+                    Leave Party
+                </button>
+            </div>
+
+            <!-- Explorers nearby -->
+            <div>
+                <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Explorers Nearby</div>
+                <div id="friends-list">
+                    <div class="text-center text-gray-400 py-8 italic bg-gray-50 dark:bg-gray-800/50 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">Connect to see nearby explorers</div>
+                </div>
+            </div>
+
+            <!-- Social feed -->
+            <div>
+                <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Activity Feed</div>
+                <div id="social-feed" class="space-y-2">
+                    <div class="bg-white dark:bg-surface-dark p-4 rounded-2xl border border-gray-100 dark:border-gray-700 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center"><span class="material-symbols-rounded text-sm text-gray-400">rss_feed</span></div>
+                        <p class="text-xs text-gray-500 font-medium italic">No activity yet. Go find some nature!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Friends -->
+        <div id="party-tab-friends" class="hidden flex-1 overflow-y-auto p-4 space-y-4 pb-nav">
+            <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Saved Friends</div>
+            <div id="saved-friends-list">
+                <p class="text-xs text-gray-400 italic text-center py-4">No saved friends yet.</p>
+            </div>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Add a Friend</div>
+                <div class="flex gap-2">
+                    <input id="add-friend-code" maxlength="9" placeholder="XXXX-XXXX"
+                        oninput="(()=>{let v=this.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase().substring(0,8);this.value=v.length>4?v.slice(0,4)+'-'+v.slice(4):v;})()"
+                        class="w-32 text-center text-sm font-black tracking-widest uppercase bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl p-2 outline-none focus:border-brand dark:text-white">
+                    <input id="add-friend-name" placeholder="Nickname" class="flex-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand dark:text-white">
+                    <button onclick="(()=>{const raw=document.getElementById('add-friend-code').value;const c=raw.replace(/[^A-Za-z0-9]/g,'').toUpperCase();const n=document.getElementById('add-friend-name').value.trim();if(c.length===8){app.multiplayer.saveFriend(c,n||raw);}})()" class="px-4 bg-brand text-white rounded-xl font-bold text-sm active:scale-95">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Session Dashboard -->
+        <div id="party-tab-session" class="hidden flex-1 overflow-y-auto p-4 pb-nav">
+            <div id="session-dashboard">
+                <p class="text-xs text-gray-400 italic text-center py-8">No session data yet. Host a party and have explorers join to see their observations here.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. ABOUT -->
+    <div id="panel-about" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">About</h2>
+            <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </header>
+        <div class="flex-1 overflow-y-auto pb-nav">
+            <!-- Hero -->
+            <div class="bg-brand text-white px-6 py-10 text-center">
+                <div class="text-6xl mb-3">🌍</div>
+                <h1 class="text-3xl font-black mb-1" style="font-family:Sora,sans-serif">Earth Day Everyday</h1>
+                <p class="text-green-100 text-sm">Your nature companion — explore, learn &amp; catalogue the wild world around you.</p>
+            </div>
+
+            <div class="p-4 space-y-4">
+                <!-- Mission -->
+                <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                    <h3 class="font-bold text-sm text-brand mb-2">🌱 Our Mission</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">Earth Day Everyday turns every walk, hike, or backyard moment into a chance to connect with nature. Instead of hunting for points, you're building a personal record of the living world — one sighting at a time.</p>
+                </div>
+
+                <!-- Features -->
+                <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                    <h3 class="font-bold text-sm text-brand mb-3">✨ Features</h3>
+                    <div class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                        <div class="flex items-start gap-2"><span class="text-base">🗺️</span><span><strong>Live Map</strong> — see what's been spotted near you using iNaturalist community data</span></div>
+                        <div class="flex items-start gap-2"><span class="text-base">🌸</span><span><strong>In Season</strong> — discover which plants &amp; animals are active right now, locally</span></div>
+                        <div class="flex items-start gap-2"><span class="text-base">🔍</span><span><strong>Identify</strong> — BirdNET audio ID, knowledge graph trait matching, and iNaturalist species search</span></div>
+                        <div class="flex items-start gap-2"><span class="text-base">📓</span><span><strong>Journal</strong> — log and geo-tag your sightings with photos and notes</span></div>
+                        <div class="flex items-start gap-2"><span class="text-base">🏆</span><span><strong>Achievements</strong> — earn badges and level up as you catalogue the world around you</span></div>
+                    </div>
+                </div>
+
+                <!-- Data sources -->
+                <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                    <h3 class="font-bold text-sm text-brand mb-3">📡 Powered By</h3>
+                    <div class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                        <div class="flex items-center gap-2"><span class="text-base">🌿</span><a href="https://www.inaturalist.org" target="_blank" class="text-brand underline font-semibold">iNaturalist</a><span>— species observations &amp; identification data</span></div>
+                        <div class="flex items-center gap-2"><span class="text-base">🐦</span><a href="https://github.com/birdnet-team/real-time-pwa" target="_blank" class="text-brand underline font-semibold">BirdNET</a><span>— real-time in-browser bird audio ID</span></div>
+                        <div class="flex items-center gap-2"><span class="text-base">🗺️</span><span class="font-semibold">Leaflet + OpenStreetMap</span><span>— mapping</span></div>
+                    </div>
+                </div>
+
+                <!-- Privacy note -->
+                <div class="bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4 border border-amber-200 dark:border-amber-800">
+                    <h3 class="font-bold text-sm text-amber-700 dark:text-amber-400 mb-1">🔒 Privacy</h3>
+                    <p class="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">Your journal and sightings are stored locally on your device. Location is only used to load nearby species data — it is never sent to our servers.</p>
+                </div>
+
+                <!-- Version + links -->
+                <div class="text-center text-xs text-gray-400 pb-4 space-y-1">
+                    <div>Version 1.0 • Built with 💚 for planet Earth</div>
+                    <button onclick="app.ui.openPanel('panel-settings')" class="text-brand underline">Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. WORKFLOW PANEL (desktop only) -->
+    <div id="panel-workflow" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <h2 id="desktop-workflow-title" class="text-xl font-black" style="font-family:Sora,sans-serif">Details</h2>
+            <button onclick="app.ui._closeDesktopWorkflow()" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </header>
+        <div id="desktop-workflow-host" class="desktop-workflow-host flex-1 overflow-y-auto bg-canvas-light dark:bg-canvas-dark"></div>
+    </div>
+
+    <!-- 8. SPECIES DETAIL -->
+    <div id="panel-species-detail" class="fixed inset-0 z-40 bg-surface-light dark:bg-surface-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <div class="absolute top-3 left-3 z-20">
+            <button onclick="app.ui.closeSpeciesDetail()" class="w-10 h-10 bg-white/90 dark:bg-black/50 backdrop-blur rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform">
+                <span class="material-symbols-rounded text-gray-800 dark:text-white">arrow_back</span>
+            </button>
+        </div>
+        <div id="species-detail-content" class="flex-1 overflow-y-auto pb-nav"></div>
+    </div>
+
+    <!-- 9. OBS DETAIL -->
+    <div id="panel-obs-detail" class="fixed inset-0 z-40 bg-surface-light dark:bg-surface-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <div class="absolute top-3 left-3 z-20">
+            <button onclick="app.ui.closeObsDetail()" class="w-10 h-10 bg-white/90 dark:bg-black/50 backdrop-blur rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform">
+                <span class="material-symbols-rounded text-gray-800 dark:text-white">arrow_back</span>
+            </button>
+        </div>
+        <div id="obs-detail-content" class="flex-1 overflow-y-auto pb-nav"></div>
+    </div>
+</div>
+
+<!-- ══ BOTTOM NAV ══════════════════════════════════════════════ -->
+<nav id="bottom-nav">
+    <button onclick="app.ui.openPanel('map')" id="nav-map" class="nav-btn active">
+        <span class="material-symbols-rounded">map</span>
+        <span>Map</span>
+    </button>
+    <button onclick="app.ui.openPanel('panel-discover')" id="nav-discover" class="nav-btn">
+        <span class="material-symbols-rounded">explore</span>
+        <span>Discover</span>
+    </button>
+    <button onclick="app.ui.openLogObservation()" class="nav-fab">
+        <div class="nav-fab-circle">
+            <span class="material-symbols-rounded text-white text-2xl">add_a_photo</span>
+        </div>
+        <span class="nav-fab-label">Log</span>
+    </button>
+    <button onclick="app.ui.openPanel('panel-identify')" id="nav-identify" class="nav-btn">
+        <span class="material-symbols-rounded">biotech</span>
+        <span>Identify</span>
+    </button>
+    <button onclick="app.ui.openPanel('panel-journal')" id="nav-journal" class="nav-btn">
+        <span class="material-symbols-rounded">auto_stories</span>
+        <span>Journal</span>
+    </button>
+</nav>
+
+<!-- ══ MODALS ═════════════════════════════════════════════════ -->
+
+<!-- Log Observation -->
+<div id="logObsModal" class="fixed inset-0 z-50 flex items-end justify-center pointer-events-none opacity-0 transition-opacity duration-300">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="app.ui.closeLogObservation()"></div>
+    <div id="logObsContent" class="bg-surface-light dark:bg-surface-dark w-full max-w-lg rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 pointer-events-auto flex flex-col max-h-[92dvh] pb-safe-b">
+        <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center shrink-0">
+            <h2 class="text-lg font-black">Log Observation</h2>
+            <button onclick="app.ui.closeLogObservation()" class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </div>
+        <div class="overflow-y-auto p-4 space-y-4 flex-1">
+            <!-- Photo -->
+            <div>
+                <label class="text-xs font-black uppercase tracking-wider text-gray-500 block mb-2">Photo</label>
+                <button onclick="app.journal.captureImage()" class="w-full aspect-video bg-gray-100 dark:bg-gray-800 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 relative overflow-hidden active:scale-99 transition-transform">
+                    <span id="obs-image-placeholder" class="flex flex-col items-center gap-2 text-gray-400">
+                        <span class="material-symbols-rounded text-4xl">add_a_photo</span>
+                        <span class="text-sm font-semibold">Tap to take a photo</span>
+                    </span>
+                    <img id="obs-image-preview" class="hidden absolute inset-0 w-full h-full object-cover rounded-2xl">
+                </button>
+                <div class="flex gap-2 mt-2">
+                    <button onclick="document.getElementById('file-upload-input').click()"
+                        class="flex-1 flex items-center justify-center gap-1.5 py-2 bg-gray-100 dark:bg-gray-800 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-300 active:scale-95 transition-transform border border-gray-200 dark:border-gray-700">
+                        <span class="material-symbols-rounded text-base">photo_library</span> From Gallery
+                    </button>
+                    <button onclick="app.ui.openSpeciesSelector(document.getElementById('obs-species-btn'))"
+                        class="flex-1 flex items-center justify-center gap-1.5 py-2 bg-brand/10 rounded-xl text-sm font-semibold text-brand active:scale-95 transition-transform border border-brand/20">
+                        <span class="material-symbols-rounded text-base">biotech</span> Identify First
+                    </button>
+                </div>
+                <input id="file-upload-input" type="file" accept="image/*" class="hidden" onchange="app.journal.handleFileUpload(this)">
+            </div>
+            <!-- Species -->
+            <div>
+                <label class="text-xs font-black uppercase tracking-wider text-gray-500 block mb-2">Species <span class="text-red-500">*</span></label>
+                <button id="obs-species-btn" onclick="app.ui.openSpeciesSelector(this)"
+                    class="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-400 font-bold p-3 rounded-xl text-sm text-left active:scale-98 transition-transform">
+                    Select species…
+                </button>
+            </div>
+            <!-- Count + Habitat -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs font-black uppercase tracking-wider text-gray-500 block mb-2">Count</label>
+                    <input id="obs-count" type="number" value="1" min="1"
+                        class="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-center font-black text-lg dark:text-white outline-none focus:ring-2 focus:ring-brand">
+                </div>
+                <div>
+                    <label class="text-xs font-black uppercase tracking-wider text-gray-500 block mb-2">Habitat</label>
+                    <select id="obs-habitat" class="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm dark:text-white outline-none focus:ring-2 focus:ring-brand">
+                        <option>Forest/Woodland</option>
+                        <option>Meadow/Field</option>
+                        <option>Wetland/Water</option>
+                        <option>Urban/Garden</option>
+                        <option>Coastal/Beach</option>
+                        <option>Mountain/Rocky</option>
+                        <option>General</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Notes -->
+            <div>
+                <label class="text-xs font-black uppercase tracking-wider text-gray-500 block mb-2">Notes</label>
+                <textarea id="obs-notes" placeholder="Behaviour, weather, habitat details…" rows="3"
+                    class="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm dark:text-white outline-none focus:ring-2 focus:ring-brand resize-none"></textarea>
+            </div>
+            <!-- Location -->
+            <div>
+                <label class="text-xs font-black uppercase tracking-wider text-gray-500 block mb-2">Location</label>
+                <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
+                    <span class="material-symbols-rounded text-brand text-lg shrink-0">location_on</span>
+                    <span id="obs-location-display" class="flex-1 text-sm text-gray-500 dark:text-gray-400 truncate">Using GPS location</span>
+                    <button onclick="app.ui.openLocationPicker()"
+                        class="text-xs font-bold text-brand px-3 py-1.5 bg-brand/10 rounded-lg active:scale-95 transition-transform shrink-0">
+                        Pick
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="p-4 shrink-0 border-t border-gray-100 dark:border-gray-700">
+            <button onclick="app.journal.submitObservation()"
+                class="w-full bg-brand text-white py-4 rounded-2xl font-black text-base shadow-lg shadow-brand/30 active:scale-95 transition-transform">
+                <span class="material-symbols-rounded align-middle mr-1">eco</span> Save Observation
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Species Selector -->
+<div id="species-select-modal" class="fixed inset-0 z-[60] flex items-end justify-center pointer-events-none opacity-0 transition-opacity duration-300">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="app.ui.closeSpeciesSelector()"></div>
+    <div class="bg-canvas-light dark:bg-canvas-dark w-full max-w-lg rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 pointer-events-auto flex flex-col max-h-[92dvh] pb-safe-b" id="species-select-content">
+        <div class="p-4 bg-surface-light dark:bg-surface-dark border-b border-gray-100 dark:border-gray-700 flex justify-between items-center shrink-0 rounded-t-3xl">
+            <h2 class="text-lg font-bold">Select Species</h2>
+            <button onclick="app.ui.closeSpeciesSelector()" class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </div>
+        <!-- Identify-first shortcuts -->
+        <div class="shrink-0 bg-brand/5 border-b border-brand/10 p-3">
+            <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 pl-1">Identify First</div>
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="app.ui._selectorToAudioId()"
+                    class="flex flex-col items-center gap-1.5 p-3 bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-600 active:scale-95 transition-transform shadow-sm">
+                    <span class="text-2xl">🎤</span>
+                    <span class="text-[11px] font-bold text-gray-700 dark:text-gray-200">Listen for Birds</span>
+                </button>
+                <button onclick="app.ui._selectorToKG()"
+                    class="flex flex-col items-center gap-1.5 p-3 bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-600 active:scale-95 transition-transform shadow-sm">
+                    <span class="text-2xl">🔬</span>
+                    <span class="text-[11px] font-bold text-gray-700 dark:text-gray-200">Key It Out</span>
+                </button>
+                <button onclick="app.ui._selectorToNearby()"
+                    class="flex flex-col items-center gap-1.5 p-3 bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-600 active:scale-95 transition-transform shadow-sm">
+                    <span class="text-2xl">📍</span>
+                    <span class="text-[11px] font-bold text-gray-700 dark:text-gray-200">Spotted Nearby</span>
+                </button>
+            </div>
+        </div>
+        <!-- Search -->
+        <div class="p-3 bg-surface-light dark:bg-surface-dark shrink-0">
+            <input id="species-selector-search" type="text" placeholder="Search species…"
+                oninput="app.ui._renderSpeciesSelectorBody()"
+                class="w-full bg-gray-100 dark:bg-gray-800 pl-4 pr-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-brand outline-none dark:text-white">
+        </div>
+        <div class="bg-surface-light dark:bg-surface-dark shrink-0 border-b border-gray-100 dark:border-gray-700">
+            <div id="species-selector-tabs" class="flex gap-2 overflow-x-auto p-3 hide-scrollbar"></div>
+        </div>
+        <div id="species-selector-body" class="flex-1 overflow-y-auto p-3 space-y-2 pb-safe-b"></div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div id="obsSuccessModal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div id="obsSuccessCard" class="bg-surface-light dark:bg-surface-dark w-full max-w-sm rounded-3xl p-7 text-center transform scale-90 transition-transform duration-300 shadow-2xl">
+        <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-5 animate-bounce">
+            <span class="material-symbols-rounded text-5xl">eco</span>
+        </div>
+        <h2 class="text-2xl font-black mb-1">Documented!</h2>
+        <p class="text-brand font-bold text-xl mb-1" id="success-species-name"></p>
+        <p class="text-xs text-gray-400 mb-5" id="success-rarity"></p>
+        <div class="flex justify-center gap-4 mb-5">
+            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl min-w-[100px] border border-gray-100 dark:border-gray-700">
+                <div class="text-2xl font-black text-brand">+<span id="success-dp"></span></div>
+                <div class="text-xs uppercase font-bold text-gray-500">Discovery Points</div>
+            </div>
+        </div>
+        <div id="success-new-badges" class="mb-5 hidden">
+            <div class="text-xs font-black uppercase tracking-wider text-amber-600 mb-2">🏅 New Badge Unlocked!</div>
+            <div id="success-badges-list" class="flex flex-wrap justify-center gap-2"></div>
+        </div>
+        <button onclick="app.ui.closeObsSuccess()" class="w-full bg-brand text-white py-4 rounded-xl font-black text-base shadow-lg shadow-brand/30 active:scale-95 transition-transform">Continue Exploring</button>
+    </div>
+</div>
+
+<!-- Location Picker Modal -->
+<div id="locationPickerModal" class="fixed inset-0 z-[70] pointer-events-none opacity-0 transition-opacity duration-300 flex flex-col">
+    <div class="absolute inset-0 bg-black/40" onclick="app.ui.closeLocationPicker()"></div>
+    <!-- Header -->
+    <div class="relative z-10 bg-surface-light dark:bg-surface-dark flex items-center justify-between px-4 shrink-0 shadow-lg"
+         style="height: var(--top-h); padding-top: env(safe-area-inset-top)">
+        <button onclick="app.ui.closeLocationPicker()" class="flex items-center gap-1.5 text-brand font-bold text-sm">
+            <span class="material-symbols-rounded text-base">close</span> Cancel
+        </button>
+        <span class="font-black text-base" style="font-family:Sora,sans-serif">Pick Location</span>
+        <button onclick="app.journal.confirmPickedLocation()" class="bg-brand text-white px-4 py-2 rounded-xl font-bold text-sm active:scale-95">
+            Confirm
+        </button>
+    </div>
+    <!-- Map fills remaining space -->
+    <div id="location-picker-map" class="relative flex-1 z-10"></div>
+    <!-- Center crosshair (pointer-events-none so map stays interactive) -->
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-20" style="margin-top: var(--top-h)">
+        <div class="flex flex-col items-center -mt-5">
+            <span class="material-symbols-rounded text-brand drop-shadow-lg" style="font-size:42px">location_on</span>
+            <div class="w-2 h-2 rounded-full bg-brand/50 -mt-1"></div>
+        </div>
+    </div>
+    <!-- Coords display at bottom -->
+    <div class="relative z-10 bg-surface-light dark:bg-surface-dark border-t border-gray-100 dark:border-gray-700 px-4 py-3 shrink-0" style="padding-bottom: calc(env(safe-area-inset-bottom) + 12px)">
+        <p class="text-xs text-gray-400 text-center">Pan the map to position the pin, then tap Confirm</p>
+        <p id="location-picker-coords" class="text-sm font-bold text-brand text-center mt-1"></p>
+    </div>
+</div>
+
+<!-- Knowledge Graph Modal -->
+<div id="kgModal" class="fixed inset-0 z-100 flex items-end justify-center pointer-events-none opacity-0 transition-opacity duration-300" style="z-index:100">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="app.ui.closeKGModal()"></div>
+    <div class="bg-surface-light dark:bg-surface-dark w-full max-w-lg rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 pointer-events-auto flex flex-col max-h-[94dvh] pb-safe-b">
+        <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🔬</span>
+                <h2 class="text-lg font-black">Key It Out</h2>
+            </div>
+            <button onclick="app.ui.closeKGModal()" class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </div>
+        <div class="px-4 py-2 flex justify-between items-center shrink-0 bg-gray-50 dark:bg-gray-800/50">
+            <button id="kg-back" class="hidden text-sm font-bold text-gray-500 active:opacity-70" onclick="app.identify.kgBack()">
+                <span class="material-symbols-rounded align-middle text-base">arrow_back_ios</span> Back
+            </button>
+            <div id="kg-progress" class="flex gap-1.5 flex-1 px-4"></div>
+            <button id="kg-next" class="hidden bg-brand text-white px-5 py-1.5 rounded-xl text-sm font-bold active:scale-95" onclick="app.identify.kgNext()">Next</button>
+        </div>
+        <div id="kg-body" class="flex-1 overflow-y-auto p-5"></div>
+    </div>
+</div>
+
+<!-- Audio ID Modal -->
+<div id="audioIdModal" class="fixed inset-0 z-100 flex items-end justify-center pointer-events-none opacity-0 transition-opacity duration-300" style="z-index:100">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="app.ui.closeAudioId()"></div>
+    <div class="bg-surface-light dark:bg-surface-dark w-full max-w-lg rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 pointer-events-auto flex flex-col max-h-[92dvh] pb-safe-b">
+        <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🎤</span>
+                <h2 class="text-lg font-black">Listen for Birds</h2>
+            </div>
+            <button onclick="app.ui.closeAudioId()" class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </div>
+        <div id="audio-id-content" class="flex-1 overflow-y-auto p-5">
+            <div class="flex flex-col items-center gap-5 py-6">
+                <div class="text-6xl">🐦</div>
+                <h3 class="text-xl font-black text-center">Ready to Listen</h3>
+                <p class="text-sm text-gray-500 text-center max-w-xs">Point your phone toward birds you hear. We'll record and analyse the audio.</p>
+                <button onclick="app.identify.startAudioId()" class="bg-brand text-white px-10 py-4 rounded-2xl font-black text-lg shadow-lg shadow-brand/30 active:scale-95 transition-transform">
+                    <span class="material-symbols-rounded align-middle mr-1">mic</span> Start Listening
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Photo Lightbox -->
+<div id="photoLightbox" class="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300" style="background:rgba(0,0,0,0.95)">
+    <button id="lightbox-close" onclick="app.ui.closeLightbox()" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white z-10 active:scale-90 pointer-events-auto">
+        <span class="material-symbols-rounded text-3xl">close</span>
+    </button>
+    <!-- Prev / Next -->
+    <button id="lightbox-prev" onclick="app.ui.lightboxNav(-1)" class="absolute left-2 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white/60 hover:text-white z-10 active:scale-90 pointer-events-auto">
+        <span class="material-symbols-rounded text-4xl">chevron_left</span>
+    </button>
+    <button id="lightbox-next" onclick="app.ui.lightboxNav(1)" class="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white/60 hover:text-white z-10 active:scale-90 pointer-events-auto">
+        <span class="material-symbols-rounded text-4xl">chevron_right</span>
+    </button>
+    <!-- Main image -->
+    <div class="flex flex-col items-center w-full px-12 pointer-events-auto">
+        <img id="lightbox-img" src="" alt="" class="max-w-full max-h-[80dvh] rounded-2xl object-contain shadow-2xl select-none" draggable="false">
+        <div id="lightbox-counter" class="text-white/50 text-sm mt-3 font-medium"></div>
+        <div id="lightbox-caption" class="text-white/70 text-sm mt-1 text-center px-4 italic"></div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container" class="fixed left-0 right-0 z-[120] flex flex-col items-center pointer-events-none gap-2 p-4"
+     style="bottom: calc(var(--nav-h) + 8px)"></div>
+
+<!-- APP LOGIC -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script type="module" src="js/app.js?v=20260421b"></script>
+</body>
+</html>
