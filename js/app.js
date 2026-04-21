@@ -242,10 +242,15 @@ const app = {
                     if (status && status !== 'granted' && status !== 'limited') return null;
                 }
                 if (typeof nativeGeo.getCurrentPosition === 'function') {
+                    let timeoutId = null;
                     const p = await Promise.race([
                         nativeGeo.getCurrentPosition({ enableHighAccuracy: true, timeout: NATIVE_LOCATION_TIMEOUT_MS, maximumAge: 10000 }),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('location timeout')), NATIVE_LOCATION_TIMEOUT_MS))
-                    ]);
+                        new Promise((_, reject) => {
+                            timeoutId = setTimeout(() => reject(new Error('location timeout')), NATIVE_LOCATION_TIMEOUT_MS);
+                        })
+                    ]).finally(() => {
+                        if (timeoutId) clearTimeout(timeoutId);
+                    });
                     if (p && p.coords) return { lat: p.coords.latitude, lng: p.coords.longitude };
                 }
             } catch (e) {

@@ -340,8 +340,15 @@ export const multiplayer = {
             this.updateAdminTable();
         } else if (d.type === 'INTRO') {
             if (d.payload && d.payload.id) {
-                const prev = this.friendsData[d.payload.id] || {};
-                this.friendsData[d.payload.id] = Object.assign({}, prev, d.payload);
+                const id = d.payload.id;
+                const prev = this.friendsData[id] || {};
+                this.friendsData[id] = {
+                    ...prev,
+                    id,
+                    shortId: d.payload.shortId ?? prev.shortId,
+                    username: d.payload.username ?? prev.username,
+                    avatar: d.payload.avatar ?? prev.avatar
+                };
                 this.updateList();
                 this.updateAdminTable();
             }
