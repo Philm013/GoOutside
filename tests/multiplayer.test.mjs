@@ -263,7 +263,10 @@ describe('multiplayer module structure', () => {
         const required = ['init', 'copyId', 'joinParty', 'disconnect', 'handleConn',
             'handleData', 'broadcast', 'broadcastPos', 'broadcastSighting',
             'broadcastJournalShare', 'sendGift', 'addToFeed', 'updateFeedUI',
-            'updateUI', 'updateList'];
+            'updateUI', 'updateList',
+            'loadFriends', 'saveFriend', 'removeFriend', '_persistFriends',
+            'drainSyncQueue', 'switchPartyTab', 'renderPartyPanel',
+            'updateSessionDashboard', 'exportSession'];
         for (const m of required) {
             assert.equal(typeof multiplayer[m], 'function', `multiplayer.${m} is not a function`);
         }
@@ -272,4 +275,275 @@ describe('multiplayer module structure', () => {
     test('socialFeed initializes as empty array', () => {
         assert.deepEqual(multiplayer.socialFeed, []);
     });
+
+    test('friends initializes as empty object', () => {
+        assert.deepEqual(multiplayer.friends, {});
+    });
+
+    test('sessionData initializes as empty object', () => {
+        assert.deepEqual(multiplayer.sessionData, {});
+    });
 });
+
+describe('multiplayer.loadFriends() / saveFriend() / removeFriend()', () => {
+    let mp;
+    let store;
+
+    beforeEach(() => {
+        mp = Object.create(multiplayer);
+        mp.friends = {};
+        store = {};
+        global.localStorage = {
+            getItem: (k) => store[k] ?? null,
+            setItem: (k, v) => { store[k] = v; },
+            removeItem: (k) => { delete store[k]; }
+        };
+    });
+
+    test('loadFriends() starts with empty object when no stored data', () => {
+        mp.loadFriends();
+        assert.deepEqual(mp.friends, {});
+    });
+
+    test('loadFriends() parses stored JSON friends', () => {
+        store['EDE_Friends'] = JSON.stringify({ AB12: { code: 'AB12', nickname: 'Alice', lastSeen: '2024-01-01' } });
+        mp.loadFriends();
+        assert.equal(mp.friends['AB12'].nickname, 'Alice');
+    });
+
+    test('loadFriends() handles invalid JSON gracefully', () => {
+        store['EDE_Friends'] = 'not-json{{{';
+        assert.doesNotThrow(() => mp.loadFriends());
+        assert.deepEqual(mp.friends, {});
+    });
+
+    test('saveFriend() adds friend to this.friends', () => {
+        mp.saveFriend('XY99', 'Bob');
+        assert.equal(mp.friends['XY99'].nickname, 'Bob');
+        assert.equal(mp.friends['XY99'].code, 'XY99');
+    });
+
+    test('saveFriend() persists to localStorage', () => {
+        mp.saveFriend('XY99', 'Bob');
+        const saved = JSON.parse(store['EDE_Friends']);
+        assert.equal(saved['XY99'].nickname, 'Bob');
+    });
+
+    test('removeFriend() removes from this.friends', () => {
+        mp.friends['XY99'] = { code: 'XY99', nickname: 'Bob', lastSeen: '' };
+        mp.removeFriend('XY99');
+        assert.equal(mp.friends['XY99'], undefined);
+    });
+
+    test('removeFriend() persists removal to localStorage', () => {
+        mp.friends['XY99'] = { code: 'XY99', nickname: 'Bob', lastSeen: '' };
+        mp.removeFriend('XY99');
+        const saved = JSON.parse(store['EDE_Friends'] || '{}');
+        assert.equal(saved['XY99'], undefined);
+    });
+});
+
+describe('multiplayer.init() — persistent code', () => {
+    let store;
+
+    beforeEach(() => {
+        store = {};
+        global.localStorage = {
+            getItem: (k) => store[k] ?? null,
+            setItem: (k, v) => { store[k] = v; },
+            removeItem: (k) => { delete store[k]; }
+        };
+    });
+
+    test('saves generated code to localStorage on first init', () => {
+        const mp = Object.create(multiplayer);
+        mp.init(makeApp());
+        assert.ok(store['EDE_MyCode']);
+        assert.match(store['EDE_MyCode'], /^[A-Z0-9]{4}$/);
+    });
+
+    test('reuses saved code from localStorage on subsequent init', () => {
+        store['EDE_MyCode'] = 'WXYZ';
+        const mp = Object.create(multiplayer);
+        mp.init(makeApp());
+        assert.equal(mp.myId, 'WXYZ');
+    });
+
+    test('generates new code if stored value is invalid', () => {
+        store['EDE_MyCode'] = 'bad!';
+        const mp = Object.create(multiplayer);
+        mp.init(makeApp());
+        assert.match(mp.myId, /^[A-Z0-9]{4}$/);
+    });
+});
+
+describe('multiplayer.drainSyncQueue()', () => {
+    let mp;
+
+    beforeEach(() => {
+        mp = Object.create(multiplayer);
+        mp.connections = [];
+        mp.hostConnection = null;
+        mp.app = makeApp({ syncQueue: [{ speciesName: 'Robin', dp: 50 }] });
+        mp._sent = [];
+        mp.broadcast = (d) => mp._sent.push(d);
+    });
+
+    test('sends SYNC_BATCH message type', () => {
+        mp.drainSyncQueue();
+        assert.equal(mp._sent.length, 1);
+        assert.equal(mp._sent[0].type, 'SYNC_BATCH');
+    });
+
+    test('payload contains observations from syncQueue', () => {
+        mp.drainSyncQueue();
+        assert.equal(mp._sent[0].payload.observations.length, 1);
+        assert.equal(mp._sent[0].payload.observations[0].speciesName, 'Robin');
+    });
+
+    test('payload includes username and avatar', () => {
+        mp.app.state.username = 'NatExp';
+        mp.app.state.avatar = '🦊';
+        mp.drainSyncQueue();
+        assert.equal(mp._sent[0].payload.username, 'NatExp');
+        assert.equal(mp._sent[0].payload.avatar, '🦊');
+    });
+
+    test('clears syncQueue after sending', () => {
+        mp.drainSyncQueue();
+        assert.deepEqual(mp.app.state.syncQueue, []);
+    });
+
+    test('sets lastSyncAt to ISO string after sending', () => {
+        mp.drainSyncQueue();
+        assert.ok(typeof mp.app.state.lastSyncAt === 'string');
+        assert.ok(mp.app.state.lastSyncAt.includes('T'));
+    });
+
+    test('does nothing when syncQueue is empty', () => {
+        mp.app.state.syncQueue = [];
+        mp.drainSyncQueue();
+        assert.equal(mp._sent.length, 0);
+    });
+
+    test('sends via hostConnection when connected as guest', () => {
+        const sent = [];
+        mp.hostConnection = { send(d) { sent.push(d); } };
+        mp.drainSyncQueue();
+        assert.equal(sent.length, 1);
+        assert.equal(mp._sent.length, 0);
+    });
+});
+
+describe('multiplayer.handleData() — SYNC_BATCH', () => {
+    let mp;
+
+    beforeEach(() => {
+        mp = Object.create(multiplayer);
+        mp.socialFeed = [];
+        mp.sessionData = {};
+        mp.app = makeApp();
+        mp.updateFeedUI = () => {};
+        mp.updateSessionDashboard = () => {};
+    });
+
+    test('populates sessionData for new explorer', () => {
+        mp.handleData({ type: 'SYNC_BATCH', payload: {
+            username: 'Alice', avatar: '🦋', shortId: 'AB12',
+            observations: [{ speciesName: 'Robin', dp: 50 }]
+        }});
+        assert.ok(mp.sessionData['AB12']);
+        assert.equal(mp.sessionData['AB12'].username, 'Alice');
+        assert.equal(mp.sessionData['AB12'].observations.length, 1);
+    });
+
+    test('appends observations for existing explorer', () => {
+        mp.sessionData['AB12'] = { username: 'Alice', avatar: '🦋', shortId: 'AB12', observations: [{ speciesName: 'Hawk' }], lastSeen: '' };
+        mp.handleData({ type: 'SYNC_BATCH', payload: {
+            username: 'Alice', avatar: '🦋', shortId: 'AB12',
+            observations: [{ speciesName: 'Robin' }]
+        }});
+        assert.equal(mp.sessionData['AB12'].observations.length, 2);
+    });
+
+    test('shows toast with synced count', () => {
+        mp.handleData({ type: 'SYNC_BATCH', payload: {
+            username: 'Bob', avatar: '🐝', shortId: 'CD34',
+            observations: [{ speciesName: 'Fox' }, { speciesName: 'Deer' }]
+        }});
+        assert.ok(mp.app._toasts.some(t => t.includes('2') && t.includes('Bob')));
+    });
+
+    test('calls updateSessionDashboard', () => {
+        let called = false;
+        mp.updateSessionDashboard = () => { called = true; };
+        mp.handleData({ type: 'SYNC_BATCH', payload: {
+            username: 'Carol', avatar: '🌿', shortId: 'EF56',
+            observations: []
+        }});
+        assert.ok(called);
+    });
+});
+
+describe('multiplayer.switchPartyTab()', () => {
+    let mp;
+    let tabs;
+    let panels;
+
+    beforeEach(() => {
+        mp = Object.create(multiplayer);
+        tabs = [
+            { dataset: { tab: 'connect' }, classList: { _active: true, toggle(cls, val) { if (cls === 'active') this._active = val; } } },
+            { dataset: { tab: 'friends' }, classList: { _active: false, toggle(cls, val) { if (cls === 'active') this._active = val; } } },
+            { dataset: { tab: 'session' }, classList: { _active: false, toggle(cls, val) { if (cls === 'active') this._active = val; } } }
+        ];
+        panels = {
+            'party-tab-connect': { classList: { _hidden: false, toggle(cls, val) { if (cls === 'hidden') this._hidden = val; } } },
+            'party-tab-friends': { classList: { _hidden: true, toggle(cls, val) { if (cls === 'hidden') this._hidden = val; } } },
+            'party-tab-session': { classList: { _hidden: true, toggle(cls, val) { if (cls === 'hidden') this._hidden = val; } } }
+        };
+        global.document = {
+            querySelectorAll: (sel) => sel === '.party-tab' ? tabs : [],
+            getElementById: (id) => panels[id] || null
+        };
+    });
+
+    test('sets active class on the selected tab', () => {
+        mp.switchPartyTab('friends');
+        assert.equal(tabs[1].classList._active, true);
+    });
+
+    test('removes active class from other tabs', () => {
+        mp.switchPartyTab('friends');
+        assert.equal(tabs[0].classList._active, false);
+        assert.equal(tabs[2].classList._active, false);
+    });
+
+    test('shows the selected tab panel', () => {
+        mp.switchPartyTab('friends');
+        assert.equal(panels['party-tab-friends'].classList._hidden, false);
+    });
+
+    test('hides other tab panels', () => {
+        mp.switchPartyTab('friends');
+        assert.equal(panels['party-tab-connect'].classList._hidden, true);
+        assert.equal(panels['party-tab-session'].classList._hidden, true);
+    });
+});
+
+describe('multiplayer.renderPartyPanel()', () => {
+    test('is a function on multiplayer module', () => {
+        assert.equal(typeof multiplayer.renderPartyPanel, 'function');
+    });
+
+    test('does not throw when DOM elements are absent', () => {
+        const mp = Object.create(multiplayer);
+        mp.app = makeApp();
+        mp._renderSavedFriends = () => {};
+        mp.updateSessionDashboard = () => {};
+        global.document = { getElementById: () => null };
+        global.localStorage = { getItem: () => null, setItem: () => {} };
+        assert.doesNotThrow(() => mp.renderPartyPanel());
+    });
+});
+

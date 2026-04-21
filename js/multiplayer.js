@@ -1,8 +1,18 @@
 export const multiplayer = {
     peer: null, myId: null, connections: [], hostConnection: null, friendsData: {},
+    friends: {}, sessionData: {},
     init(app) {
         this.app = app;
-        this.myId = Math.random().toString(36).substring(2, 6).toUpperCase();
+        // Persistent explorer code
+        const ls = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') ? localStorage : null;
+        const saved = ls ? ls.getItem('EDE_MyCode') : null;
+        if (saved && /^[A-Z0-9]{4}$/.test(saved)) {
+            this.myId = saved;
+        } else {
+            this.myId = Math.random().toString(36).substring(2, 6).toUpperCase();
+            if (ls) ls.setItem('EDE_MyCode', this.myId);
+        }
+        this.loadFriends();
         if (typeof Peer !== 'undefined') {
             this.peer = new Peer(`NQ24-${this.myId}`);
             this.peer.on('open', () => {
@@ -18,6 +28,28 @@ export const multiplayer = {
             if (this.app.ui) this.app.ui.showToast("Code Copied!");
         });
     },
+    loadFriends() {
+        try {
+            const ls = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') ? localStorage : null;
+            const raw = ls ? ls.getItem('EDE_Friends') : null;
+            this.friends = raw ? JSON.parse(raw) : {};
+        } catch (e) {
+            this.friends = {};
+        }
+    },
+    saveFriend(code, nickname) {
+        this.friends[code] = { code, nickname, lastSeen: new Date().toISOString() };
+        this._persistFriends();
+    },
+    removeFriend(code) {
+        delete this.friends[code];
+        this._persistFriends();
+    },
+    _persistFriends() {
+        if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
+            localStorage.setItem('EDE_Friends', JSON.stringify(this.friends));
+        }
+    },
     joinParty() {
         const codeInput = document.getElementById('target-peer-id');
         const code = codeInput ? codeInput.value.trim().toUpperCase() : "";
@@ -28,6 +60,7 @@ export const multiplayer = {
         const conn = this.peer.connect(`NQ24-${code}`);
         conn.on('open', () => {
             this.hostConnection = conn;
+            if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') localStorage.setItem('EDE_LastParty', code);
             this.app.state._joinedParty = true;
             this.app.data.checkBadges(this.app.state);
             this.app.saveState();
@@ -37,6 +70,7 @@ export const multiplayer = {
             }
             this._posInterval = setInterval(() => this.broadcastPos(), 5000);
             this.broadcastPos();
+            this.drainSyncQueue();
         });
         conn.on('data', d => this.handleData(d));
         conn.on('close', () => {
@@ -96,6 +130,16 @@ export const multiplayer = {
             }
         } else if (d.type === 'MSG') {
             if (this.app.ui) this.app.ui.showToast(`HOST: ${d.payload}`);
+        } else if (d.type === 'SYNC_BATCH') {
+            const { username, avatar, shortId, observations } = d.payload;
+            if (!this.sessionData[shortId]) this.sessionData[shortId] = { username, avatar, shortId, observations: [], lastSeen: new Date().toISOString() };
+            this.sessionData[shortId].observations = [...(this.sessionData[shortId].observations || []), ...observations];
+            this.sessionData[shortId].lastSeen = new Date().toISOString();
+            if (this.app.ui) {
+                this.app.ui.showToast(`Synced ${observations.length} obs from ${username}!`);
+                this.addToFeed({ type: 'sync', user: username, item: `${observations.length} observations`, icon: 'sync' });
+            }
+            this.updateSessionDashboard();
         }
     },
     broadcast(d, exclude) {
@@ -175,6 +219,120 @@ export const multiplayer = {
                     </button>
                 </div>
             </div>`).join('');
+    },
+    drainSyncQueue() {
+        const q = this.app.state.syncQueue || [];
+        if (q.length === 0) return;
+        const payload = { username: this.app.state.username, avatar: this.app.state.avatar, shortId: this.myId, observations: q };
+        const msg = { type: 'SYNC_BATCH', payload };
+        if (this.hostConnection) this.hostConnection.send(msg);
+        else this.broadcast(msg);
+        this.app.state.syncQueue = [];
+        this.app.state.lastSyncAt = new Date().toISOString();
+        this.app.saveState();
+    },
+    switchPartyTab(tab) {
+        document.querySelectorAll('.party-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+        ['connect', 'friends', 'session'].forEach(t => {
+            const el = document.getElementById(`party-tab-${t}`);
+            if (el) el.classList.toggle('hidden', t !== tab);
+        });
+    },
+    renderPartyPanel() {
+        // Sync pending badge
+        const badge = document.getElementById('sync-pending-badge');
+        const qLen = this.app?.state?.syncQueue?.length || 0;
+        if (badge) {
+            badge.textContent = `${qLen} pending`;
+            badge.classList.toggle('hidden', qLen === 0);
+        }
+        // Rejoin button
+        const lastParty = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') ? localStorage.getItem('EDE_LastParty') : null;
+        const rejoinBtn = document.getElementById('rejoin-party-btn');
+        if (rejoinBtn) {
+            if (lastParty) {
+                rejoinBtn.classList.remove('hidden');
+                rejoinBtn.textContent = `↩ Rejoin: ${lastParty}`;
+                rejoinBtn.onclick = () => {
+                    const inp = document.getElementById('target-peer-id');
+                    if (inp) inp.value = lastParty;
+                    this.joinParty();
+                };
+            } else {
+                rejoinBtn.classList.add('hidden');
+            }
+        }
+        // Render saved friends tab
+        this._renderSavedFriends();
+        // Render session dashboard
+        this.updateSessionDashboard();
+    },
+    _renderSavedFriends() {
+        const el = document.getElementById('saved-friends-list');
+        if (!el) return;
+        const entries = Object.values(this.friends);
+        if (entries.length === 0) {
+            el.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">No saved friends yet. Connect with someone to save them!</p>';
+            return;
+        }
+        el.innerHTML = entries.map(f => `
+            <div class="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+                <div>
+                    <div class="font-black text-sm text-gray-900 dark:text-white">${f.nickname || f.code}</div>
+                    <div class="text-[10px] text-gray-400 font-mono">${f.code}</div>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                    <button onclick="(()=>{const i=document.getElementById('target-peer-id');if(i)i.value='${f.code}';app.multiplayer.switchPartyTab('connect');})()" class="px-3 py-1.5 bg-brand text-white text-xs font-bold rounded-xl active:scale-95">Connect</button>
+                    <button onclick="app.multiplayer.removeFriend('${f.code}');app.multiplayer._renderSavedFriends();" class="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold rounded-xl active:scale-95">Remove</button>
+                </div>
+            </div>`).join('');
+    },
+    updateSessionDashboard() {
+        const el = document.getElementById('session-dashboard');
+        if (!el) return;
+        const explorers = Object.values(this.sessionData);
+        if (explorers.length === 0) {
+            el.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-8">No session data yet. Host a party and have explorers join to see their observations here.</p>';
+            return;
+        }
+        const totalObs = explorers.reduce((sum, e) => sum + (e.observations?.length || 0), 0);
+        const allSpp = [...new Set(explorers.flatMap(e => (e.observations || []).map(o => o.speciesName).filter(Boolean)))];
+        let html = `<div class="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 space-y-1 mb-4">
+            <div class="flex justify-between text-sm"><span class="text-gray-500 font-bold">Explorers</span><span class="font-black text-gray-900 dark:text-white">${explorers.length}</span></div>
+            <div class="flex justify-between text-sm"><span class="text-gray-500 font-bold">Total Observations</span><span class="font-black text-gray-900 dark:text-white">${totalObs}</span></div>
+            <div class="flex justify-between text-sm"><span class="text-gray-500 font-bold">Unique Species</span><span class="font-black text-brand">${allSpp.length}</span></div>
+        </div>`;
+        html += '<div class="space-y-2 mb-4">' + explorers.map(ex => {
+            const spp = [...new Set((ex.observations || []).map(o => o.speciesName).filter(Boolean))];
+            return `<div class="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2"><span class="text-xl">${ex.avatar || '🌿'}</span>
+                    <div><div class="font-black text-sm dark:text-white">${ex.username}</div>
+                    <div class="text-[10px] text-gray-400">${ex.observations?.length || 0} obs · ${spp.length} spp</div></div>
+                </div></div>`;
+        }).join('') + '</div>';
+        if (allSpp.length > 0) {
+            html += `<div class="bg-brand/10 rounded-2xl p-3"><div class="text-xs font-black uppercase tracking-widest text-brand mb-2">Species Found</div>
+                <div class="flex flex-wrap gap-1.5">${allSpp.map(s => `<span class="bg-white dark:bg-gray-800 text-xs font-bold px-2 py-1 rounded-lg border border-gray-100 dark:border-gray-700">${s}</span>`).join('')}</div></div>`;
+        }
+        html += `<button onclick="app.multiplayer.exportSession()" class="w-full mt-4 bg-brand text-white py-3 rounded-2xl font-bold active:scale-95 shadow-md">Export Session</button>`;
+        el.innerHTML = html;
+    },
+    exportSession() {
+        const lines = ['=== Earth Day Everyday — Session Export ===', `Date: ${new Date().toLocaleDateString()}`, ''];
+        Object.values(this.sessionData).forEach(explorer => {
+            lines.push(`Explorer: ${explorer.avatar || '🌿'} ${explorer.username} (${explorer.shortId})`);
+            lines.push(`  Observations: ${explorer.observations.length}`);
+            const spp = [...new Set(explorer.observations.map(o => o.speciesName).filter(Boolean))];
+            lines.push(`  Species: ${spp.join(', ')}`);
+            lines.push('');
+        });
+        const allSpp = [...new Set(Object.values(this.sessionData).flatMap(e => e.observations.map(o => o.speciesName).filter(Boolean)))];
+        lines.push(`TOTAL SPECIES FOUND: ${allSpp.length}`);
+        lines.push(allSpp.join(', '));
+        const text = lines.join('\n');
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => { if (this.app.ui) this.app.ui.showToast('Session exported!'); });
+        }
     },
     socialFeed: [],
     addToFeed(entry) {

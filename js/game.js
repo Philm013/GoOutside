@@ -139,6 +139,9 @@ export const game = {
         s.observations = s.observations.slice(0, 500);
         s.discoveryPoints += dp;
 
+        if (!Array.isArray(s.syncQueue)) s.syncQueue = [];
+        s.syncQueue.push({ ...entry });
+
         const newBadges = this.app.data.checkBadges(s);
         this.app.saveState();
 

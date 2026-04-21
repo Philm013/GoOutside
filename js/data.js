@@ -108,6 +108,8 @@ export const data = {
         if (typeof s.catalogue !== 'object' || s.catalogue === null) s.catalogue = {};
         if (!Array.isArray(s.badges)) s.badges = [];
         if (typeof s.settings !== 'object') s.settings = {};
+        if (!Array.isArray(s.syncQueue)) s.syncQueue = [];
+        if (!('lastSyncAt' in s)) s.lastSyncAt = null;
         // Migrate from old xp field: only if raw had no discoveryPoints of its own
         if (!('discoveryPoints' in (raw || {})) && raw && raw.xp) s.discoveryPoints = raw.xp;
         // Migrate old catalogue entries lacking iconic field
@@ -130,7 +132,9 @@ export const data = {
             observations: [],
             catalogue: {},
             badges: [],
-            settings: {}
+            settings: {},
+            syncQueue: [],
+            lastSyncAt: null
         };
     }
 };

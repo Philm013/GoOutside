@@ -17,6 +17,8 @@ describe('data.defaultState()', () => {
         assert.deepEqual(s.catalogue, {});
         assert.deepEqual(s.badges, []);
         assert.deepEqual(s.settings, {});
+        assert.deepEqual(s.syncQueue, []);
+        assert.strictEqual(s.lastSyncAt, null);
     });
 
     test('username has randomness (two calls differ with high probability)', () => {
@@ -423,5 +425,26 @@ describe('data.normalizeState()', () => {
     test('preserves existing iconic field', () => {
         const s = data.normalizeState({ catalogue: { 99: { count: 2, iconic: 'Aves' } } });
         assert.equal(s.catalogue[99].iconic, 'Aves');
+    });
+
+    test('normalizes missing syncQueue to empty array', () => {
+        const s = data.normalizeState({});
+        assert.deepEqual(s.syncQueue, []);
+    });
+
+    test('heals non-array syncQueue', () => {
+        const s = data.normalizeState({ syncQueue: null });
+        assert.deepEqual(s.syncQueue, []);
+    });
+
+    test('normalizes missing lastSyncAt to null', () => {
+        const s = data.normalizeState({});
+        assert.strictEqual(s.lastSyncAt, null);
+    });
+
+    test('preserves existing lastSyncAt value', () => {
+        const ts = '2024-04-22T10:00:00.000Z';
+        const s = data.normalizeState({ lastSyncAt: ts });
+        assert.equal(s.lastSyncAt, ts);
     });
 });

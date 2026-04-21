@@ -29,11 +29,12 @@ export const ui = {
         if (!isMap) {
             const panel = document.getElementById(id);
             if (panel) { panel.classList.add('panel-active'); panel.style.transform = 'translateX(0)'; }
-            const navMap = { 'panel-discover': 'nav-discover', 'panel-identify': 'nav-identify', 'panel-journal': 'nav-journal' };
+            const navMap = { 'panel-discover': 'nav-discover', 'panel-identify': 'nav-identify', 'panel-journal': 'nav-journal', 'panel-party': 'nav-party' };
             if (navMap[id]) document.getElementById(navMap[id])?.classList.add('active');
             if (id === 'panel-journal') this.app.journal.renderJournal();
             if (id === 'panel-profile') this.renderProfile();
             if (id === 'panel-discover') this.renderDiscover('nearby');
+            if (id === 'panel-party') this.app.multiplayer.renderPartyPanel();
         } else {
             document.getElementById('nav-map')?.classList.add('active');
             // Reset journal search when leaving journal panel

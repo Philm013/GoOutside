@@ -461,10 +461,20 @@
     <!-- PARTY -->
     <div id="panel-party" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
         <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
-            <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">🌿 Explore Together</h2>
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-black" style="font-family:Sora,sans-serif">🌿 Explore Together</h2>
+                <span id="sync-pending-badge" class="hidden text-[10px] font-black bg-amber-400 text-white px-2 py-0.5 rounded-full">0 pending</span>
+            </div>
             <button onclick="app.ui.openPanel('map')" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
         </header>
-        <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-nav">
+        <!-- Party tabs -->
+        <div class="flex border-b border-gray-100 dark:border-gray-700 shrink-0">
+            <button class="party-tab active flex-1 py-2.5 text-sm font-bold" data-tab="connect" onclick="app.multiplayer.switchPartyTab('connect')">Connect</button>
+            <button class="party-tab flex-1 py-2.5 text-sm font-bold" data-tab="friends" onclick="app.multiplayer.switchPartyTab('friends')">Friends</button>
+            <button class="party-tab flex-1 py-2.5 text-sm font-bold" data-tab="session" onclick="app.multiplayer.switchPartyTab('session')">Session</button>
+        </div>
+        <!-- Tab: Connect -->
+        <div id="party-tab-connect" class="flex-1 overflow-y-auto p-4 space-y-4 pb-nav">
             <!-- My code -->
             <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
                 <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Your Explorer Code</div>
@@ -477,13 +487,17 @@
                     </button>
                 </div>
                 <p class="text-xs text-gray-400 text-center mt-2">Share this code with friends to explore together</p>
+                <input id="session-name-input" placeholder="Session name (optional)" class="mt-3 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand dark:text-white">
             </div>
+
+            <!-- Rejoin last party -->
+            <button id="rejoin-party-btn" class="hidden w-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 py-2.5 rounded-2xl font-bold text-sm active:scale-95"></button>
 
             <!-- Connection controls -->
             <div id="host-controls">
                 <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Join a Party</div>
                 <div class="flex gap-2">
-                    <input id="target-peer-id" maxlength="4" placeholder="Enter code" 
+                    <input id="target-peer-id" maxlength="4" placeholder="Enter code"
                         class="flex-1 text-center text-2xl font-black tracking-widest uppercase bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-2xl p-3 outline-none focus:border-brand dark:text-white">
                     <button onclick="app.multiplayer.joinParty()" class="px-5 bg-brand text-white rounded-2xl font-bold active:scale-95 shadow-md">
                         Join
@@ -497,7 +511,7 @@
                 </button>
             </div>
 
-            <!-- Friends list -->
+            <!-- Explorers nearby -->
             <div>
                 <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Explorers Nearby</div>
                 <div id="friends-list">
@@ -514,6 +528,29 @@
                         <p class="text-xs text-gray-500 font-medium italic">No activity yet. Go find some nature!</p>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Tab: Friends -->
+        <div id="party-tab-friends" class="hidden flex-1 overflow-y-auto p-4 space-y-4 pb-nav">
+            <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Saved Friends</div>
+            <div id="saved-friends-list">
+                <p class="text-xs text-gray-400 italic text-center py-4">No saved friends yet.</p>
+            </div>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Add a Friend</div>
+                <div class="flex gap-2">
+                    <input id="add-friend-code" maxlength="4" placeholder="Code" class="w-24 text-center text-lg font-black tracking-widest uppercase bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl p-2 outline-none focus:border-brand dark:text-white">
+                    <input id="add-friend-name" placeholder="Nickname" class="flex-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand dark:text-white">
+                    <button onclick="(()=>{const c=document.getElementById('add-friend-code').value.trim().toUpperCase();const n=document.getElementById('add-friend-name').value.trim();if(c.length===4){app.multiplayer.saveFriend(c,n||c);app.multiplayer._renderSavedFriends();}})()" class="px-4 bg-brand text-white rounded-xl font-bold text-sm active:scale-95">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Session Dashboard -->
+        <div id="party-tab-session" class="hidden flex-1 overflow-y-auto p-4 pb-nav">
+            <div id="session-dashboard">
+                <p class="text-xs text-gray-400 italic text-center py-8">No session data yet. Host a party and have explorers join to see their observations here.</p>
             </div>
         </div>
     </div>
@@ -879,6 +916,6 @@
 
 <!-- APP LOGIC -->
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script type="module" src="js/app.js?v=20260421a"></script>
+<script type="module" src="js/app.js?v=20260421b"></script>
 </body>
 </html>
