@@ -4,6 +4,114 @@ export const ui = {
     selectorActiveFilter: 'all',
     avatars: ['🌳','🦋','🦉','🦊','🐻','🐝','🐞','🐢','🐍','🐸','🐿️','🦔','🦌','🦅','🐦','🌿'],
 
+    _isDesktop() {
+        return typeof window !== 'undefined' && window.innerWidth >= 1024;
+    },
+
+    _getActivePanelId() {
+        return document.querySelector('#panels-container .slide-panel.panel-active')?.id || 'map';
+    },
+
+    _sendWorkflowEntryHome(entry) {
+        if (!entry) return;
+        entry.nodes.forEach((node, idx) => {
+            const origin = entry.origins[idx];
+            if (!origin?.parent) return;
+            if (origin.nextSibling && origin.nextSibling.parentNode === origin.parent) {
+                origin.parent.insertBefore(node, origin.nextSibling);
+            } else {
+                origin.parent.appendChild(node);
+            }
+        });
+    },
+
+    _showWorkflowEntry(entry) {
+        const host = document.getElementById('desktop-workflow-host');
+        const title = document.getElementById('desktop-workflow-title');
+        const panel = document.getElementById('panel-workflow');
+        if (!host || !title || !panel || !entry) return;
+        host.innerHTML = '';
+        entry.nodes.forEach(node => host.appendChild(node));
+        title.textContent = entry.title;
+        panel.dataset.workflowKey = entry.key;
+    },
+
+    _openDesktopWorkflow(key, title, nodes) {
+        if (!this._isDesktop()) return false;
+        const list = Array.isArray(nodes) ? nodes.filter(Boolean) : [nodes].filter(Boolean);
+        if (!list.length) return true;
+        const host = document.getElementById('desktop-workflow-host');
+        if (!host) return true;
+        const state = this._desktopWorkflowState || { stack: [], current: null, previousPanelId: 'map' };
+        if (!state.current) {
+            const activeId = this._getActivePanelId();
+            state.previousPanelId = activeId === 'panel-workflow' ? 'map' : activeId;
+        } else {
+            this._sendWorkflowEntryHome(state.current);
+            state.stack.push(state.current);
+        }
+        state.current = {
+            key,
+            title,
+            nodes: list,
+            origins: list.map(node => ({ parent: node.parentNode, nextSibling: node.nextSibling }))
+        };
+        this._desktopWorkflowState = state;
+        document.body.classList.add('desktop-workflow-open');
+        this.openPanel('panel-workflow');
+        this._showWorkflowEntry(state.current);
+        return true;
+    },
+
+    _closeDesktopWorkflow(key) {
+        if (!this._isDesktop()) return false;
+        const state = this._desktopWorkflowState;
+        if (!state?.current) return false;
+        if (key && state.current.key !== key) return false;
+
+        this._sendWorkflowEntryHome(state.current);
+
+        if (state.stack.length) {
+            state.current = state.stack.pop();
+            this.openPanel('panel-workflow');
+            this._showWorkflowEntry(state.current);
+            return true;
+        }
+
+        state.current = null;
+        state.stack = [];
+        document.body.classList.remove('desktop-workflow-open');
+        const title = document.getElementById('desktop-workflow-title');
+        const host = document.getElementById('desktop-workflow-host');
+        const panel = document.getElementById('panel-workflow');
+        if (title) title.textContent = 'Details';
+        if (host) host.innerHTML = '';
+        if (panel) delete panel.dataset.workflowKey;
+
+        this._closingDesktopWorkflow = true;
+        try {
+            this.openPanel(state.previousPanelId || 'map');
+        } finally {
+            this._closingDesktopWorkflow = false;
+        }
+        return true;
+    },
+
+    _resetDesktopWorkflow() {
+        const state = this._desktopWorkflowState;
+        if (!state) return;
+        if (state.current) this._sendWorkflowEntryHome(state.current);
+        while (state.stack?.length) this._sendWorkflowEntryHome(state.stack.pop());
+        state.current = null;
+        document.body.classList.remove('desktop-workflow-open');
+        const title = document.getElementById('desktop-workflow-title');
+        const host = document.getElementById('desktop-workflow-host');
+        const panel = document.getElementById('panel-workflow');
+        if (title) title.textContent = 'Details';
+        if (host) host.innerHTML = '';
+        if (panel) delete panel.dataset.workflowKey;
+    },
+
     init(app) {
         this.app = app;
         this._loadSettings();
@@ -20,6 +128,9 @@ export const ui = {
     },
 
     openPanel(id) {
+        if (this._isDesktop() && id !== 'panel-workflow' && this._desktopWorkflowState?.current && !this._closingDesktopWorkflow) {
+            this._resetDesktopWorkflow();
+        }
         const isMap = id === 'map';
         document.querySelectorAll('#panels-container .slide-panel').forEach(p => {
             p.classList.remove('panel-active');
@@ -40,7 +151,7 @@ export const ui = {
             // Reset journal search when leaving journal panel
             this.closeJournalSearch();
         }
-        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
+        const isDesktop = this._isDesktop();
         // Top bar: transparent + glass on map, solid on panels
         const topBar = document.getElementById('top-bar');
         if (topBar) topBar.classList.toggle('is-map', isMap);
@@ -522,6 +633,30 @@ export const ui = {
     },
 
     openLogObservation(preselectTaxonId) {
+        if (this._isDesktop()) {
+            const specBtn = document.getElementById('obs-species-btn');
+            this.app.journal.currentImage = null;
+            const preview = document.getElementById('obs-image-preview');
+            const placeholder = document.getElementById('obs-image-placeholder');
+            if (preview) { preview.classList.add('hidden'); preview.src = ''; }
+            if (placeholder) placeholder.classList.remove('hidden');
+            if (specBtn) { specBtn.textContent = 'Select species…'; delete specBtn.dataset.id; delete specBtn.dataset.name; delete specBtn.dataset.iconic; }
+            const notes = document.getElementById('obs-notes');
+            if (notes) notes.value = '';
+            this.app.journal._pendingObsLocation = null;
+            const locEl = document.getElementById('obs-location-display');
+            if (locEl) locEl.textContent = 'Using GPS location';
+            const exifBanner = document.getElementById('obs-exif-banner');
+            if (exifBanner) exifBanner.remove();
+            const count = document.getElementById('obs-count');
+            if (count) count.value = '1';
+            if (preselectTaxonId) {
+                const species = (this.app.localSpecies || []).find(s => s.id == preselectTaxonId);
+                if (species && specBtn) { specBtn.textContent = species.name; specBtn.dataset.id = species.id; specBtn.dataset.name = species.name; specBtn.dataset.iconic = species.iconic || ''; }
+            }
+            this._openDesktopWorkflow('log', 'Log Observation', document.getElementById('logObsContent'));
+            return;
+        }
         const modal = document.getElementById('logObsModal');
         const content = document.getElementById('logObsContent');
         if (!modal) return;
@@ -551,6 +686,7 @@ export const ui = {
     },
 
     closeLogObservation() {
+        if (this._closeDesktopWorkflow('log')) return;
         const modal = document.getElementById('logObsModal');
         const content = document.getElementById('logObsContent');
         if (!modal) return;
@@ -566,6 +702,9 @@ export const ui = {
         if (search) search.value = '';
         this._renderSpeciesSelectorTabs();
         this._renderSpeciesSelectorBody();
+        if (this._openDesktopWorkflow('species-selector', 'Select Species', document.getElementById('species-select-content'))) {
+            return;
+        }
         const modal = document.getElementById('species-select-modal');
         const content = document.getElementById('species-select-content');
         if (!modal) return;
@@ -575,6 +714,7 @@ export const ui = {
     },
 
     closeSpeciesSelector() {
+        if (this._closeDesktopWorkflow('species-selector')) return;
         const modal = document.getElementById('species-select-modal');
         const content = document.getElementById('species-select-content');
         if (!modal) return;
@@ -630,10 +770,9 @@ export const ui = {
         this.selectorTarget.dataset.id = taxonId || '';
         this.selectorTarget.dataset.name = commonName;
         this.selectorTarget.dataset.iconic = '';
-        this.closeSpeciesSelector();
-        // Close audio/KG modals if open
         this.closeAudioId();
         this.closeKGModal();
+        this.closeSpeciesSelector();
     },
 
     _renderSpeciesSelectorTabs() {
@@ -691,6 +830,11 @@ export const ui = {
     },
 
     showObsSuccess(obs, newBadges) {
+        if (this._isDesktop()) {
+            this.showToast('Logged ' + obs.speciesName + ' +' + obs.dp + ' DP', 3200);
+            this.renderHUDStats();
+            return;
+        }
         newBadges = newBadges || [];
         const modal = document.getElementById('obsSuccessModal');
         const card = document.getElementById('obsSuccessCard');
@@ -722,6 +866,10 @@ export const ui = {
     },
 
     openKGModal() {
+        if (this._openDesktopWorkflow('kg', 'Key It Out', document.getElementById('kgModal')?.querySelector('.rounded-t-3xl'))) {
+            if (this.app.identify) this.app.identify.startKnowledgeGraph();
+            return;
+        }
         if (this.app.identify) this.app.identify.startKnowledgeGraph();
         const modal = document.getElementById('kgModal');
         const inner = modal?.querySelector('.rounded-t-3xl');
@@ -732,6 +880,10 @@ export const ui = {
     },
 
     closeKGModal() {
+        if (this._closeDesktopWorkflow('kg')) {
+            if (this.app.identify?.stopAudio) this.app.identify.stopAudio();
+            return;
+        }
         const modal = document.getElementById('kgModal');
         const inner = modal?.querySelector('.rounded-t-3xl');
         if (!modal) return;
@@ -742,6 +894,12 @@ export const ui = {
     },
 
     openAudioId() {
+        if (this._openDesktopWorkflow('audio', 'Listen for Birds', document.getElementById('audioIdModal')?.querySelector('.rounded-t-3xl'))) {
+            if (this.app.identify && !this.app.identify._birdnetWorker) {
+                this.app.identify._initBirdNetWorker();
+            }
+            return;
+        }
         const modal = document.getElementById('audioIdModal');
         const inner = modal?.querySelector('.rounded-t-3xl');
         if (!modal) return;
@@ -755,6 +913,18 @@ export const ui = {
     },
 
     closeAudioId() {
+        if (this._closeDesktopWorkflow('audio')) {
+            if (this.app.identify?.stopAudio) this.app.identify.stopAudio();
+            const content = document.getElementById('audio-id-content');
+            if (content && this.app.identify) {
+                if (this.app.identify._birdnetReady) {
+                    this.app.identify._renderReadyToListen(content);
+                } else {
+                    content.innerHTML = '<div class="flex flex-col items-center gap-5 py-6"><div class="text-6xl">🐦</div><h3 class="text-xl font-black text-center">Listen for Birds</h3><p class="text-sm text-gray-500 text-center max-w-xs">BirdNET identifies birds from audio entirely on your device — no internet required for analysis.</p><button onclick="app.identify.startAudioId()" class="bg-brand text-white px-10 py-4 rounded-2xl font-black text-lg shadow-lg shadow-brand/30 active:scale-95 transition-transform"><span class="material-symbols-rounded align-middle mr-1">mic</span> Start Listening</button></div>';
+                }
+            }
+            return;
+        }
         if (this.app.identify?.stopAudio) this.app.identify.stopAudio();
         const modal = document.getElementById('audioIdModal');
         const inner = modal?.querySelector('.rounded-t-3xl');
@@ -835,6 +1005,37 @@ export const ui = {
     },
 
     openLocationPicker() {
+        if (this._openDesktopWorkflow('location', 'Pick Location', Array.from(document.getElementById('locationPickerModal')?.children || []).slice(1))) {
+            if (!this._pickerMap) {
+                const lat = this.app.map.pos.lat || 0;
+                const lng = this.app.map.pos.lng || 0;
+                this._pickerMap = L.map('location-picker-map', { zoomControl: false }).setView(
+                    [lat || 20, lng || 0], lat ? 15 : 2
+                );
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(this._pickerMap);
+                const pending = this.app.journal._pendingObsLocation;
+                if (pending) this._pickerMap.setView([pending.lat, pending.lng], 16);
+
+                this._pickerMap.on('move', () => {
+                    const c = this._pickerMap.getCenter();
+                    const el = document.getElementById('location-picker-coords');
+                    if (el) el.textContent = c.lat.toFixed(5) + ', ' + c.lng.toFixed(5);
+                });
+                this._pickerMap.on('moveend', () => {
+                    const c = this._pickerMap.getCenter();
+                    this._pickerTempLocation = { lat: c.lat, lng: c.lng };
+                });
+            } else {
+                setTimeout(() => this._pickerMap.invalidateSize(), 100);
+            }
+            const c = this._pickerMap.getCenter();
+            const el = document.getElementById('location-picker-coords');
+            if (el) el.textContent = c.lat.toFixed(5) + ', ' + c.lng.toFixed(5);
+            this._pickerTempLocation = { lat: c.lat, lng: c.lng };
+            return;
+        }
         const modal = document.getElementById('locationPickerModal');
         if (!modal) return;
         modal.classList.remove('pointer-events-none', 'opacity-0');
@@ -871,6 +1072,7 @@ export const ui = {
     },
 
     closeLocationPicker() {
+        if (this._closeDesktopWorkflow('location')) return;
         const modal = document.getElementById('locationPickerModal');
         if (!modal) return;
         modal.classList.add('pointer-events-none', 'opacity-0');

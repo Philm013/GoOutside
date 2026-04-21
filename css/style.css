@@ -1104,3 +1104,267 @@ body { background: var(--paper); overflow: hidden; overscroll-behavior: none; }
     to   { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in { animation: fadeIn 0.2s ease forwards; }
+
+/* ── Desktop Layout (>=1024px) ──────────────────────────────── */
+@media (min-width: 1024px) {
+    /* Left desktop rail */
+    #bottom-nav {
+        position: fixed !important;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        right: auto;
+        width: 220px;
+        height: 100dvh;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+        padding: 0 12px 16px;
+        border-right: 1px solid #dfe4df;
+        border-top: none;
+        gap: 6px;
+        overflow-y: auto;
+        z-index: 35;
+        box-shadow: inset -1px 0 0 rgba(255,255,255,0.35);
+        background: linear-gradient(180deg, #f8fbf7 0%, #f1f6f1 100%);
+    }
+    @media (prefers-color-scheme: dark) {
+        #bottom-nav {
+            border-right-color: #344038;
+            box-shadow: none;
+            background: linear-gradient(180deg, #1f271f 0%, #1a211a 100%);
+        }
+    }
+
+    #bottom-nav::before {
+        content: 'Earth Day Everyday';
+        display: block;
+        font-weight: 900;
+        font-size: 12px;
+        color: var(--brand);
+        padding: 18px 10px 14px;
+        border-bottom: 1px solid #dfe4df;
+        margin-bottom: 10px;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        flex-shrink: 0;
+    }
+    @media (prefers-color-scheme: dark) {
+        #bottom-nav::before { border-bottom-color: #344038; }
+    }
+
+    #bottom-nav .nav-btn,
+    #bottom-nav .nav-fab {
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        padding: 11px 14px;
+        border-radius: 14px;
+        gap: 10px;
+        min-height: 46px;
+        font-size: 13px;
+        width: 100%;
+        margin-top: 0;
+        color: #5f6e64;
+        transition: background-color 0.18s ease, color 0.18s ease;
+    }
+    #bottom-nav .nav-btn:hover { background: rgba(45,106,79,0.08); }
+    #bottom-nav .nav-btn.active {
+        background: rgba(45,106,79,0.14);
+        color: var(--brand);
+    }
+    #bottom-nav .nav-btn .material-symbols-rounded,
+    #bottom-nav .nav-fab .material-symbols-rounded {
+        font-size: 20px;
+    }
+
+    #bottom-nav .nav-btn span:last-child,
+    #bottom-nav .nav-fab .nav-fab-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+    }
+
+    #bottom-nav .nav-fab {
+        order: 10;
+        margin-top: auto;
+        background: var(--brand);
+        color: #fff;
+        box-shadow: 0 10px 20px rgba(45,106,79,0.22);
+    }
+    #bottom-nav .nav-fab:hover { background: #256247; }
+    #bottom-nav .nav-fab .nav-fab-circle { display: none; }
+
+    /* Main map stage */
+    #map {
+        left: 220px !important;
+        right: 0 !important;
+        transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    body.desktop-panel-open #map { right: 386px !important; }
+
+    /* Top bar aligned to map */
+    #top-bar {
+        left: 220px !important;
+        right: 0 !important;
+        padding-left: 16px !important;
+        transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    body.desktop-panel-open #top-bar { right: 386px !important; }
+
+    /* Map controls move to top-right on desktop */
+    #map-controls {
+        top: calc(var(--top-h) + 12px) !important;
+        bottom: auto !important;
+        right: 20px !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    body.desktop-panel-open #map-controls { right: 404px !important; }
+
+    /* Right desktop panel rail */
+    #panels-container {
+        position: fixed !important;
+        left: auto !important;
+        right: 14px !important;
+        top: 10px !important;
+        bottom: 10px !important;
+        width: 360px !important;
+        z-index: 20;
+    }
+
+    #panels-container .slide-panel {
+        position: absolute !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        transform: translateX(100%) !important;
+        border: 1px solid #dfe4df;
+        border-radius: 22px !important;
+        box-shadow: -8px 18px 36px rgba(0,0,0,0.12);
+        overflow: hidden;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    @media (prefers-color-scheme: dark) {
+        #panels-container .slide-panel { border-color: #344038; }
+    }
+    #panels-container .slide-panel.panel-active {
+        transform: translateX(0) !important;
+        pointer-events: all;
+    }
+
+    /* Floating desktop dock */
+    #home-sheet {
+        left: 236px !important;
+        right: 18px !important;
+        top: auto !important;
+        bottom: 12px !important;
+        height: 76px;
+        border-radius: 18px !important;
+        border: 1px solid rgba(45,106,79,0.12);
+        background: rgba(255,255,255,0.9);
+        backdrop-filter: blur(10px) saturate(150%);
+        -webkit-backdrop-filter: blur(10px) saturate(150%);
+        box-shadow: 0 14px 30px rgba(15, 33, 25, 0.16);
+        overflow: hidden;
+        transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1), height 0.22s ease !important;
+    }
+    body.desktop-panel-open #home-sheet { right: 404px !important; }
+    #home-sheet:not(.is-dock) { height: 220px; }
+    @media (prefers-color-scheme: dark) {
+        #home-sheet {
+            border-color: rgba(82,183,136,0.2);
+            background: rgba(31,42,25,0.88);
+            box-shadow: 0 14px 30px rgba(0,0,0,0.4);
+        }
+    }
+
+    #home-sheet-backdrop,
+    #home-sheet-handle-bar,
+    #home-sheet-expand-row {
+        display: none !important;
+    }
+
+    #home-sheet-handle {
+        padding: 0;
+        cursor: pointer;
+    }
+
+    #home-sheet-dock-bar {
+        display: flex !important;
+        align-items: center;
+        padding: 16px 18px 14px;
+        gap: 12px;
+        pointer-events: auto;
+        border-bottom: 1px solid transparent;
+    }
+    #home-sheet:not(.is-dock) #home-sheet-dock-bar {
+        border-bottom-color: rgba(45,106,79,0.1);
+    }
+    @media (prefers-color-scheme: dark) {
+        #home-sheet:not(.is-dock) #home-sheet-dock-bar { border-bottom-color: rgba(82,183,136,0.12); }
+    }
+
+    #home-sheet-content {
+        overflow-y: auto !important;
+        padding-top: 0;
+        opacity: 1;
+        transition: opacity 0.18s ease;
+    }
+    #home-sheet.is-dock #home-sheet-content {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* Desktop simplification: keep sheet lightweight */
+    .hs-recent-badge,
+    .hs-achievement-card,
+    .hs-discover-btn {
+        display: none !important;
+    }
+    .hs-today-row {
+        padding-top: 10px;
+        padding-bottom: 6px;
+    }
+    .hs-species-row {
+        padding-top: 2px;
+        padding-bottom: 8px;
+    }
+    .hs-species-card { width: 114px; }
+    .hs-nearby-card { width: 96px; }
+
+    #panel-workflow .desktop-workflow-host {
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        height: 100%;
+    }
+    #desktop-workflow-host > #logObsContent,
+    #desktop-workflow-host > #species-select-content,
+    #desktop-workflow-host > .rounded-t-3xl {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+    #desktop-workflow-host > #logObsContent,
+    #desktop-workflow-host > #species-select-content,
+    #desktop-workflow-host > .rounded-t-3xl,
+    #desktop-workflow-host > .relative.z-10 {
+        flex: 1 1 auto;
+    }
+    #panel-workflow #location-picker-map {
+        min-height: 360px;
+    }
+
+    /* Remove mobile-only bottom spacing in desktop panels */
+    .pb-nav { padding-bottom: 14px !important; }
+}

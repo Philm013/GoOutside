@@ -616,7 +616,16 @@
         </div>
     </div>
 
-    <!-- 7. SPECIES DETAIL -->
+    <!-- 7. WORKFLOW PANEL (desktop only) -->
+    <div id="panel-workflow" class="absolute inset-0 bg-canvas-light dark:bg-canvas-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
+        <header class="bg-surface-light dark:bg-surface-dark px-4 py-3 flex items-center justify-between shadow-sm shrink-0 h-14">
+            <h2 id="desktop-workflow-title" class="text-xl font-black" style="font-family:Sora,sans-serif">Details</h2>
+            <button onclick="app.ui._closeDesktopWorkflow()" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="material-symbols-rounded text-lg">close</span></button>
+        </header>
+        <div id="desktop-workflow-host" class="desktop-workflow-host flex-1 overflow-y-auto bg-canvas-light dark:bg-canvas-dark"></div>
+    </div>
+
+    <!-- 8. SPECIES DETAIL -->
     <div id="panel-species-detail" class="fixed inset-0 z-40 bg-surface-light dark:bg-surface-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
         <div class="absolute top-3 left-3 z-20">
             <button onclick="app.ui.closeSpeciesDetail()" class="w-10 h-10 bg-white/90 dark:bg-black/50 backdrop-blur rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform">
@@ -626,7 +635,7 @@
         <div id="species-detail-content" class="flex-1 overflow-y-auto pb-nav"></div>
     </div>
 
-    <!-- 7. OBS DETAIL -->
+    <!-- 9. OBS DETAIL -->
     <div id="panel-obs-detail" class="fixed inset-0 z-40 bg-surface-light dark:bg-surface-dark transform translate-x-full slide-panel flex flex-col pointer-events-auto">
         <div class="absolute top-3 left-3 z-20">
             <button onclick="app.ui.closeObsDetail()" class="w-10 h-10 bg-white/90 dark:bg-black/50 backdrop-blur rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform">
