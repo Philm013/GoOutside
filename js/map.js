@@ -188,7 +188,6 @@ export const map = {
         this._communityLayerOn = on;
         const cb = document.getElementById('toggle-community-layer');
         const cbQuick = document.getElementById('quick-toggle-community');
-        if (!this.communityLayer) return;
         if (on) {
             if (!this.map.hasLayer(this.communityLayer)) this.communityLayer.addTo(this.map);
         } else {
@@ -202,7 +201,6 @@ export const map = {
         this._personalLayerOn = on;
         const cb = document.getElementById('toggle-personal-layer');
         const cbQuick = document.getElementById('quick-toggle-personal');
-        if (!this.personalLayer) return;
         if (on) {
             if (!this.map.hasLayer(this.personalLayer)) this.personalLayer.addTo(this.map);
         } else {
@@ -215,7 +213,10 @@ export const map = {
     async toggleIconicLayer(iconicTaxonName, on) {
         const normalizedTaxon = this.app.inat.normalizeIconicTaxon(iconicTaxonName);
         const allowedTaxa = new Set(this.app.ui?.ICONIC_TAXA || []);
-        if (!allowedTaxa.has(normalizedTaxon)) return;
+        if (!allowedTaxa.has(normalizedTaxon)) {
+            console.warn('Ignoring unsupported iconic taxon toggle:', iconicTaxonName);
+            return;
+        }
         if (!this._iconicLayerState) this._iconicLayerState = {};
         this._iconicLayerState[normalizedTaxon] = !!on;
         this._syncIconicCheckboxes(normalizedTaxon);
