@@ -92,14 +92,14 @@ export const map = {
         this._renderCommunityObservations();
     },
 
-    _selectedIconicTaxa() {
+    _getSelectedIconicTaxonNames() {
         return Object.entries(this._iconicLayerState || {})
             .filter(([, on]) => !!on)
             .map(([name]) => name);
     },
 
     _filteredCommunityObservations() {
-        const selected = this._selectedIconicTaxa();
+        const selected = this._getSelectedIconicTaxonNames();
         if (!selected.length) return this._communityObsData || [];
         const selectedSet = new Set(selected);
         return (this._communityObsData || []).filter(o => selectedSet.has(o?.taxon?.iconic_taxon_name));
@@ -188,6 +188,7 @@ export const map = {
         this._communityLayerOn = on;
         const cb = document.getElementById('toggle-community-layer');
         const cbQuick = document.getElementById('quick-toggle-community');
+        if (!this.communityLayer) return;
         if (on) {
             if (!this.map.hasLayer(this.communityLayer)) this.communityLayer.addTo(this.map);
         } else {
@@ -201,6 +202,7 @@ export const map = {
         this._personalLayerOn = on;
         const cb = document.getElementById('toggle-personal-layer');
         const cbQuick = document.getElementById('quick-toggle-personal');
+        if (!this.personalLayer) return;
         if (on) {
             if (!this.map.hasLayer(this.personalLayer)) this.personalLayer.addTo(this.map);
         } else {
@@ -211,9 +213,12 @@ export const map = {
     },
 
     async toggleIconicLayer(iconicTaxonName, on) {
+        const normalizedTaxon = this.app.inat.normalizeIconicTaxon(iconicTaxonName);
+        const allowedTaxa = new Set(this.app.ui?.ICONIC_TAXA || []);
+        if (!allowedTaxa.has(normalizedTaxon)) return;
         if (!this._iconicLayerState) this._iconicLayerState = {};
-        this._iconicLayerState[iconicTaxonName] = !!on;
-        this._syncIconicCheckboxes(iconicTaxonName);
+        this._iconicLayerState[normalizedTaxon] = !!on;
+        this._syncIconicCheckboxes(normalizedTaxon);
         if (!this._communityObsData?.length && this.pos?.lat && this.pos?.lng) {
             await this._loadCommunityObs();
             return;
@@ -222,12 +227,16 @@ export const map = {
     },
 
     _syncIconicCheckboxes(iconicTaxonName = null) {
-        const taxa = iconicTaxonName ? [iconicTaxonName] : Object.keys(this._iconicLayerState || {});
-        taxa.forEach(t => {
-            const checked = !!this._iconicLayerState?.[t];
-            document.querySelectorAll(`[data-iconic-toggle="${t}"]`).forEach(el => {
+        if (iconicTaxonName) {
+            const checked = !!this._iconicLayerState?.[iconicTaxonName];
+            document.querySelectorAll(`[data-iconic-toggle="${iconicTaxonName}"]`).forEach(el => {
                 el.checked = checked;
             });
+            return;
+        }
+        document.querySelectorAll('[data-iconic-toggle]').forEach(el => {
+            const t = el.getAttribute('data-iconic-toggle');
+            el.checked = !!this._iconicLayerState?.[t];
         });
     },
 
