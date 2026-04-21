@@ -171,6 +171,19 @@ export const multiplayer = {
         try { return localStorage.getItem('EDE_LastParty'); } catch (e) { return null; }
     },
 
+    _sendIntro(conn) {
+        if (!conn || !conn.open) return;
+        conn.send({
+            type: 'INTRO',
+            payload: {
+                id: this.peer ? this.peer.id : null,
+                shortId: this.myId,
+                username: this.app && this.app.state ? this.app.state.username : '',
+                avatar: this.app && this.app.state ? this.app.state.avatar : ''
+            }
+        });
+    },
+
     // Presence probing (lightweight online detection for saved friends)
     probeAllFriends() {
         if (!this.peer || !this.peer.id) return;
@@ -249,6 +262,7 @@ export const multiplayer = {
         this._markHealth(conn.peer, { status: 'connected', lastPong: Date.now() });
         if (this.app.ui) { this.app.ui.showToast('Connected! \uD83C\uDF3F'); this.updateUI(); }
         if (!this._posInterval) this._posInterval = setInterval(() => this.broadcastPos(), 5000);
+        this._sendIntro(conn);
         this.broadcastPos();
         this.drainSyncQueue();
         conn.on('data', d => { this._markHealth(conn.peer, { lastActivity: Date.now() }); this.handleData(d); });
@@ -293,6 +307,8 @@ export const multiplayer = {
         }
         this.connections.push(conn);
         this._markHealth(conn.peer, { status: 'connected', lastPong: Date.now() });
+        if (conn.open) this._sendIntro(conn);
+        else conn.on('open', () => this._sendIntro(conn));
         conn.on('data', d => {
             this._markHealth(conn.peer, { lastActivity: Date.now() });
             if (!this.hostConnection) this.broadcast(d, conn.peer);
@@ -318,12 +334,26 @@ export const multiplayer = {
             this._markHealth(d.payload.id, { lastPong: Date.now(), latency: latency, status: 'connected' });
             this.updateList();
         } else if (d.type === 'POS') {
-            if (this.app.map) this.app.map.updatePlayer(d.payload);
+            if (this.app.map && this.app.map.updatePlayer) this.app.map.updatePlayer(d.payload);
             this.friendsData[d.payload.id] = d.payload;
             this.updateList();
             this.updateAdminTable();
+        } else if (d.type === 'INTRO') {
+            if (d.payload && d.payload.id) {
+                const id = d.payload.id;
+                const prev = this.friendsData[id] || {};
+                this.friendsData[id] = {
+                    ...prev,
+                    id,
+                    shortId: d.payload.shortId ?? prev.shortId,
+                    username: d.payload.username ?? prev.username,
+                    avatar: d.payload.avatar ?? prev.avatar
+                };
+                this.updateList();
+                this.updateAdminTable();
+            }
         } else if (d.type === 'SIGHTING') {
-            if (this.app.map) this.app.map.addGlobalSighting(d.payload);
+            if (this.app.map && this.app.map.addGlobalSighting) this.app.map.addGlobalSighting(d.payload);
             if (this.app.ui) {
                 this.app.ui.showToast(d.payload.username + ' found a ' + d.payload.speciesName + '!');
                 this.addToFeed({ type: 'sighting', user: d.payload.username, item: d.payload.speciesName, icon: 'visibility' });
