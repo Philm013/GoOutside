@@ -40,11 +40,16 @@ export const ui = {
             // Reset journal search when leaving journal panel
             this.closeJournalSearch();
         }
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
         // Top bar: transparent + glass on map, solid on panels
         const topBar = document.getElementById('top-bar');
         if (topBar) topBar.classList.toggle('is-map', isMap);
+        // Desktop: body class drives map/topbar shrink via CSS; home sheet always visible
+        if (isDesktop) {
+            document.body.classList.toggle('desktop-panel-open', !isMap);
+        }
         const sheet = document.getElementById('home-sheet');
-        if (sheet) sheet.style.visibility = isMap ? 'visible' : 'hidden';
+        if (sheet) sheet.style.visibility = isDesktop ? 'visible' : (isMap ? 'visible' : 'hidden');
         // Collapse the sheet whenever navigating away from map
         if (!isMap && this.app.hud && this.app.hud.peekHomeSheet) this.app.hud.peekHomeSheet();
         // Close layer picker when navigating
@@ -53,7 +58,16 @@ export const ui = {
         const layerBtn = document.getElementById('map-layer-toggle');
         if (layerBtn) layerBtn.classList.remove('ring-2', 'ring-brand');
         const mapControls = document.getElementById('map-controls');
-        if (mapControls) { mapControls.style.opacity = isMap ? '1' : '0'; mapControls.style.pointerEvents = isMap ? 'auto' : 'none'; }
+        // Desktop: map controls always visible; mobile: only on map
+        if (mapControls) {
+            if (isDesktop) {
+                mapControls.style.opacity = '1';
+                mapControls.style.pointerEvents = 'auto';
+            } else {
+                mapControls.style.opacity = isMap ? '1' : '0';
+                mapControls.style.pointerEvents = isMap ? 'auto' : 'none';
+            }
+        }
         if (this.app.haptics) this.app.haptics.vibrate();
         setTimeout(() => { if (this.app.map && this.app.map.map) this.app.map.map.invalidateSize(); }, 350);
     },

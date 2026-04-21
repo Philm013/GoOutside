@@ -349,33 +349,49 @@ body, html {
 
 /* --- DESKTOP RESPONSIVE LAYOUT (≥1024px) --- */
 @media (min-width: 1024px) {
-    /* Side navigation replaces bottom nav */
+    /* === LEFT SIDEBAR NAVIGATION === */
     #bottom-nav {
         position: fixed !important;
-        left: 0; top: 0;
-        width: 240px; height: 100vh;
+        left: 0; top: 0; bottom: 0;
+        width: 240px;
+        height: 100dvh;
         flex-direction: column;
         justify-content: flex-start;
         align-items: stretch;
-        padding: 88px 12px 24px;
+        padding: 0 12px 24px;
         border-right: 1px solid var(--border);
         border-bottom: none;
         gap: 4px;
         overflow-y: auto;
         z-index: 25;
-        height: 100svh;
+        background: var(--surface);
+    }
+
+    /* Logo/brand header at top of sidebar */
+    #bottom-nav::before {
+        content: '🌍  Earth Day Everyday';
+        display: block;
+        font-weight: 900;
+        font-size: 13px;
+        color: var(--primary);
+        padding: 20px 8px 16px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 8px;
+        letter-spacing: -0.01em;
+        flex-shrink: 0;
     }
 
     #bottom-nav .nav-btn, #bottom-nav .nav-fab {
         flex-direction: row;
         justify-content: flex-start;
         padding: 12px 16px;
-        border-radius: 16px;
+        border-radius: 12px;
         gap: 12px;
         height: auto;
         min-height: 48px;
         font-size: 14px;
         width: 100%;
+        flex-shrink: 0;
     }
 
     #bottom-nav .nav-btn span:last-child,
@@ -385,6 +401,7 @@ body, html {
         font-weight: 700;
     }
 
+    /* Log button at bottom of sidebar */
     #bottom-nav .nav-fab {
         order: 10;
         margin-top: auto;
@@ -392,47 +409,92 @@ body, html {
         color: white;
     }
 
-    #bottom-nav .nav-fab .nav-fab-circle {
-        display: none;
+    #bottom-nav .nav-fab .nav-fab-circle { display: none; }
+
+    /* === MAP: center stage, shrinks when right panel opens === */
+    #map {
+        left: 240px !important;
+        right: 0 !important;
+        transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    body.desktop-panel-open #map { right: 420px !important; }
+
+    /* === TOP BAR === */
+    #top-bar {
+        left: 240px !important;
+        right: 0 !important;
+        padding-left: 16px !important;
+        transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    body.desktop-panel-open #top-bar { right: 420px !important; }
+
+    /* === MAP CONTROLS: always visible on desktop === */
+    #map-controls {
+        left: calc(240px + 16px) !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        transition: none;
     }
 
-    /* Map adjusts for side nav */
-    #map { left: 240px !important; }
-
-    /* Panels container adjusts */
-    #panels-container { left: 240px !important; }
-
-    /* Top bar spans full width but has left padding */
-    #top-bar { padding-left: calc(240px + 16px) !important; }
-
-    /* HUD map controls adjust */
-    #map-controls { left: calc(240px + 16px) !important; }
-
-    /* Panel-party becomes a right sidebar on desktop */
-    #panel-party {
+    /* === PANELS CONTAINER: fixed right column, 420px wide === */
+    #panels-container {
         position: fixed !important;
         left: auto !important;
         right: 0 !important;
-        width: 380px !important;
         top: 0 !important;
         bottom: 0 !important;
+        width: 420px !important;
+        z-index: 20;
+    }
+
+    /* === PANELS: fill the right column, slide in from right === */
+    #panels-container .slide-panel {
+        position: absolute !important;
+        left: 0 !important; right: 0 !important;
+        top: 0 !important; bottom: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
         transform: translateX(100%) !important;
-        z-index: 35 !important;
-        box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+        border-left: 1px solid var(--border);
+        border-radius: 0 !important;
+        box-shadow: -8px 0 32px rgba(0,0,0,0.06);
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    #panel-party.panel-active {
+    #panels-container .slide-panel.panel-active {
         transform: translateX(0) !important;
+        pointer-events: all;
     }
 
-    /* Other panels capped width on desktop */
-    #panels-container .slide-panel:not(#panel-party) {
-        max-width: 420px;
+    /* Party panel: same as all other panels on desktop (no special override needed) */
+    #panel-party {
+        position: absolute !important;
+        left: 0 !important; right: 0 !important;
+        top: 0 !important; bottom: 0 !important;
+        width: 100% !important;
+        box-shadow: none !important;
     }
 
-    /* Session dashboard font size */
-    #party-tab-session {
-        font-size: 13px;
+    /* === HOME SHEET: desktop compact ribbon === */
+    #home-sheet {
+        left: 240px !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        border-radius: 0 !important;
+        border-top: 1px solid var(--border) !important;
+        transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.3s ease !important;
     }
+    body.desktop-panel-open #home-sheet { right: 420px !important; }
+
+    /* Hide touch-only affordances */
+    #home-sheet-handle-bar { display: none; }
+    #home-sheet-backdrop { display: none !important; }
+    #home-sheet-close-hint { display: none; }
+
+    /* Remove mobile bottom padding */
+    .pb-nav { padding-bottom: 1rem !important; }
+
+    /* Session dashboard font */
+    #party-tab-session { font-size: 13px; }
 }
 
