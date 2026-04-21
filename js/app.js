@@ -225,14 +225,38 @@ const app = {
         }
     },
 
-    // Request geolocation with a 6s timeout; resolves null on error/timeout
-    _getLocation() {
-        return new Promise(resolve => {
+    _nativeGeoPlugin() {
+        if (typeof Capacitor === 'undefined' || !Capacitor.isNativePlatform || !Capacitor.isNativePlatform()) return null;
+        return Capacitor.Plugins && Capacitor.Plugins.Geolocation ? Capacitor.Plugins.Geolocation : null;
+    },
+
+    // Request geolocation with timeout; resolves null on error/timeout
+    async _getLocation() {
+        const nativeGeo = this._nativeGeoPlugin();
+        if (nativeGeo) {
+            try {
+                if (typeof nativeGeo.requestPermissions === 'function') {
+                    const perm = await nativeGeo.requestPermissions();
+                    const status = perm?.location || perm?.coarseLocation;
+                    if (status && status !== 'granted' && status !== 'limited') return null;
+                }
+                if (typeof nativeGeo.getCurrentPosition === 'function') {
+                    const p = await Promise.race([
+                        nativeGeo.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('location timeout')), 8000))
+                    ]);
+                    if (p && p.coords) return { lat: p.coords.latitude, lng: p.coords.longitude };
+                }
+            } catch (e) {
+                return null;
+            }
+        }
+        return await new Promise(resolve => {
             if (!navigator.geolocation) return resolve(null);
             const timer = setTimeout(() => resolve(null), 6000);
             navigator.geolocation.getCurrentPosition(
                 (p) => { clearTimeout(timer); resolve({ lat: p.coords.latitude, lng: p.coords.longitude }); },
-                ()  => { clearTimeout(timer); resolve(null); },
+                () => { clearTimeout(timer); resolve(null); },
                 { enableHighAccuracy: true, timeout: 6000 }
             );
         });

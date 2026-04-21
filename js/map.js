@@ -4,9 +4,11 @@ export const map = {
     me: null,
     communityLayer: null,
     personalLayer: null,
+    playersLayer: null,
     centered: false,
     communityMarkers: [],
     personalMarkers: [],
+    playerMarkers: {},
     _communityLayerOn: true,
     _personalLayerOn: true,
     _iconicLayerState: {},
@@ -32,6 +34,7 @@ export const map = {
 
         this.communityLayer = L.layerGroup().addTo(this.map);
         this.personalLayer = L.layerGroup().addTo(this.map);
+        this.playersLayer = L.layerGroup().addTo(this.map);
 
         this.me = L.marker([0, 0], {
             icon: L.divIcon({
@@ -50,16 +53,33 @@ export const map = {
 
         const geoOpts = { enableHighAccuracy: true };
         if (typeof Capacitor !== "undefined" && Capacitor.isNativePlatform()) {
-            Capacitor.Plugins.Geolocation.watchPosition(geoOpts, (p) => {
-                if (p.error) return;
-                this._onPosition(p.coords.latitude, p.coords.longitude);
-            });
+            const geo = Capacitor.Plugins && Capacitor.Plugins.Geolocation ? Capacitor.Plugins.Geolocation : null;
+            if (geo) {
+                const startWatch = () => {
+                    geo.watchPosition(geoOpts, (p, err) => {
+                        if (err || !p || !p.coords) return;
+                        this._onPosition(p.coords.latitude, p.coords.longitude);
+                    });
+                };
+                if (typeof geo.requestPermissions === 'function') {
+                    geo.requestPermissions()
+                        .then(perm => {
+                            const status = perm?.location || perm?.coarseLocation;
+                            if (!status || status === 'granted' || status === 'limited') startWatch();
+                        })
+                        .catch(() => {});
+                } else {
+                    startWatch();
+                }
+            }
         } else {
-            navigator.geolocation.watchPosition(
-                p => this._onPosition(p.coords.latitude, p.coords.longitude),
-                err => console.warn("Geo error", err),
-                geoOpts
-            );
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(
+                    p => this._onPosition(p.coords.latitude, p.coords.longitude),
+                    err => console.warn("Geo error", err),
+                    geoOpts
+                );
+            }
         }
     },
 
@@ -252,5 +272,55 @@ export const map = {
     refreshAvatar() {
         const el = document.getElementById("map-me");
         if (el) el.textContent = this.app.state.avatar;
+    },
+
+    updatePlayer(p) {
+        if (!p || !p.id || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return;
+        const selfId = this.app && this.app.multiplayer && this.app.multiplayer.peer ? this.app.multiplayer.peer.id : null;
+        if (selfId && p.id === selfId) return;
+        let marker = this.playerMarkers[p.id];
+        if (!marker) {
+            const icon = L.divIcon({
+                className: "bg-transparent",
+                html: "<div class=\"map-me-pin\" style=\"opacity:.95\">" + this._esc(p.avatar || '🌿') + "</div>",
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+            marker = L.marker([p.lat, p.lng], { icon, zIndexOffset: 800 }).addTo(this.playersLayer);
+            this.playerMarkers[p.id] = marker;
+        } else {
+            marker.setLatLng([p.lat, p.lng]);
+        }
+        const name = this._esc(p.username || 'Explorer');
+        const code = this._esc(p.shortId || '');
+        marker.bindPopup("<div class='com-popup'><div class='com-popup-body'><div class='com-popup-name'>" + name + "</div><div class='com-popup-meta'>" + code + "</div></div></div>", { maxWidth: 180, className: 'ede-popup' });
+    },
+
+    removePlayer(peerId) {
+        const m = this.playerMarkers[peerId];
+        if (!m) return;
+        try { this.playersLayer.removeLayer(m); } catch (e) {}
+        delete this.playerMarkers[peerId];
+    },
+
+    clearPlayers() {
+        Object.keys(this.playerMarkers).forEach(id => this.removePlayer(id));
+    },
+
+    addGlobalSighting(payload) {
+        if (!payload || !Number.isFinite(payload.lat) || !Number.isFinite(payload.lng)) return;
+        const obs = {
+            location: payload.lat + "," + payload.lng,
+            observed_on: new Date().toISOString().slice(0, 10),
+            place_guess: 'Party sighting',
+            user: { login: payload.username || 'Explorer' },
+            taxon: {
+                preferred_common_name: payload.speciesName || 'Shared sighting',
+                name: payload.speciesName || 'Shared sighting',
+                iconic_taxon_name: payload.iconic || null
+            },
+            photos: []
+        };
+        this._addCommunityPin(obs);
     }
 };
