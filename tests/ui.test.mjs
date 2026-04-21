@@ -339,12 +339,14 @@ describe('ui._renderLayerPicker()', () => {
         ui._renderLayerPicker(picker);
         assert.ok(picker.innerHTML.includes('quick-toggle-community'));
         assert.ok(picker.innerHTML.includes('quick-toggle-personal'));
+        assert.ok(picker.innerHTML.includes('All Community Sightings'));
     });
 
     test('renders a checkbox for each ICONIC_TAXA entry', () => {
         ui._renderLayerPicker(picker);
         for (const t of ui.ICONIC_TAXA) {
             assert.ok(picker.innerHTML.includes(`toggleIconicLayer('${t}'`), `Missing toggle for ${t}`);
+            assert.ok(picker.innerHTML.includes(`data-iconic-toggle="${t}"`), `Missing sync hook for ${t}`);
         }
     });
 
