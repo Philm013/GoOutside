@@ -7,6 +7,10 @@ export const map = {
     centered: false,
     communityMarkers: [],
     personalMarkers: [],
+    _communityLayerOn: true,
+    _personalLayerOn: true,
+    _iconicLayerState: {},
+    _communityObsData: [],
 
     _esc(v) {
         return String(v ?? '')
@@ -40,6 +44,9 @@ export const map = {
         }).addTo(this.map);
 
         this._loadPersonalSightings();
+        this.toggleCommunityLayer(true);
+        this.togglePersonalLayer(true);
+        this._syncIconicCheckboxes();
 
         const geoOpts = { enableHighAccuracy: true };
         if (typeof Capacitor !== "undefined" && Capacitor.isNativePlatform()) {
@@ -77,9 +84,31 @@ export const map = {
 
     async _loadCommunityObs() {
         const obs = await this.app.inat.nearbyObservations(this.pos.lat, this.pos.lng, { limit: 50, days: 14 });
+        this._setCommunityObservations(obs);
+    },
+
+    _setCommunityObservations(obs) {
+        this._communityObsData = Array.isArray(obs) ? obs : [];
+        this._renderCommunityObservations();
+    },
+
+    _getSelectedIconicTaxonNames() {
+        return Object.entries(this._iconicLayerState || {})
+            .filter(([, on]) => !!on)
+            .map(([name]) => name);
+    },
+
+    _filteredCommunityObservations() {
+        const selected = this._getSelectedIconicTaxonNames();
+        if (!selected.length) return this._communityObsData || [];
+        const selectedSet = new Set(selected);
+        return (this._communityObsData || []).filter(o => selectedSet.has(o?.taxon?.iconic_taxon_name));
+    },
+
+    _renderCommunityObservations() {
         this.communityLayer.clearLayers();
         this.communityMarkers = [];
-        obs.forEach(o => this._addCommunityPin(o));
+        this._filteredCommunityObservations().forEach(o => this._addCommunityPin(o));
     },
 
     _addCommunityPin(o) {
@@ -182,54 +211,34 @@ export const map = {
     },
 
     async toggleIconicLayer(iconicTaxonName, on) {
-        if (!this._iconicLayerState) this._iconicLayerState = {};
-        this._iconicLayerState[iconicTaxonName] = on;
-        const layerId = 'iconic_' + iconicTaxonName;
-        if (on) {
-            if (this._iconicLayers?.[layerId]) {
-                this._iconicLayers[layerId].addTo(this.map);
-                return;
-            }
-            if (!this.app.inat || !this.pos.lat) return;
-            this._iconicLayers = this._iconicLayers || {};
-            const obs = await this.app.inat.nearbyObservations(this.pos.lat, this.pos.lng, {
-                iconic: iconicTaxonName, limit: 50
-            });
-            const layer = L.layerGroup();
-            (obs || []).forEach(o => {
-                const lat = o.location?.split(',')[0];
-                const lng = o.location?.split(',')[1];
-                if (!lat || !lng) return;
-                const taxonId = o.taxon?.id;
-                const name = o.taxon?.preferred_common_name || o.taxon?.name || "Unknown";
-                const photo = o.photos?.[0]?.url?.replace("square", "small");
-                const squarePhoto = o.taxon?.default_photo?.square_url || o.photos?.[0]?.url || '';
-                const emoji = this.app.inat.iconicEmoji(o.taxon?.iconic_taxon_name || iconicTaxonName);
-                const imgHtml = photo ? "<img src='" + this._esc(photo) + "' class=\"com-pin-img\">" : "<div class=\"com-pin-emoji\">" + this._esc(emoji) + "</div>";
-                const icon = L.divIcon({
-                    className: "bg-transparent",
-                    html: "<div class=\"community-obs-pin\">" + imgHtml + "</div>",
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
-                });
-                const marker = L.marker([parseFloat(lat), parseFloat(lng)], { icon }).addTo(layer);
-                const popupHtml = "<div class='com-popup'>" +
-                    (squarePhoto ? "<img src='" + this._esc(squarePhoto) + "' class='com-popup-img'>" : "<div class='com-popup-emoji'>" + this._esc(emoji) + "</div>") +
-                    "<div class='com-popup-body'>" +
-                    "<div class='com-popup-name'>" + this._esc(name) + "</div>" +
-                    "<div class='com-popup-meta'>" + this._esc(o.place_guess || "Nearby") + " · " + this._esc(o.observed_on || "") + "</div>" +
-                    (o.user?.login ? "<div class='com-popup-by'>@" + this._esc(o.user.login) + "</div>" : "") +
-                    (taxonId ? "<button onclick=\"app.ui.openSpeciesDetail(" + taxonId + ");\" class='com-popup-btn'>View Species ›</button>" : "") +
-                    "</div></div>";
-                marker.bindPopup(popupHtml, { maxWidth: 240, className: 'ede-popup' });
-            });
-            this._iconicLayers[layerId] = layer;
-            layer.addTo(this.map);
-        } else {
-            if (this._iconicLayers?.[layerId]) {
-                this.map.removeLayer(this._iconicLayers[layerId]);
-            }
+        const normalizedTaxon = this.app.inat.normalizeIconicTaxon(iconicTaxonName);
+        const allowedTaxa = new Set(this.app.ui?.ICONIC_TAXA || []);
+        if (!allowedTaxa.has(normalizedTaxon)) {
+            console.warn('Ignoring unsupported iconic taxon toggle:', iconicTaxonName);
+            return;
         }
+        if (!this._iconicLayerState) this._iconicLayerState = {};
+        this._iconicLayerState[normalizedTaxon] = !!on;
+        this._syncIconicCheckboxes(normalizedTaxon);
+        if (!this._communityObsData?.length && this.pos?.lat && this.pos?.lng) {
+            await this._loadCommunityObs();
+            return;
+        }
+        this._renderCommunityObservations();
+    },
+
+    _syncIconicCheckboxes(iconicTaxonName = null) {
+        if (iconicTaxonName) {
+            const checked = !!this._iconicLayerState?.[iconicTaxonName];
+            document.querySelectorAll(`[data-iconic-toggle="${iconicTaxonName}"]`).forEach(el => {
+                el.checked = checked;
+            });
+            return;
+        }
+        document.querySelectorAll('[data-iconic-toggle]').forEach(el => {
+            const t = el.getAttribute('data-iconic-toggle');
+            el.checked = !!this._iconicLayerState?.[t];
+        });
     },
 
     recenter() {

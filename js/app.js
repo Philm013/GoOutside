@@ -90,8 +90,8 @@ const app = {
         this.ui.openPanel('map');
 
         // ── 7. Apply pre-loaded observations to map if available ────
-        if (this._preloadedObs && this.map._addCommunityPin) {
-            this._preloadedObs.forEach(o => this.map._addCommunityPin(o));
+        if (this._preloadedObs && this.map._setCommunityObservations) {
+            this.map._setCommunityObservations(this._preloadedObs);
         }
 
         setProgress(100, 'Ready to explore! 🌍');
