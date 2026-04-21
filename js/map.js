@@ -65,7 +65,7 @@ export const map = {
                     geo.requestPermissions()
                         .then(perm => {
                             const status = perm?.location || perm?.coarseLocation;
-                            if (!status || status === 'granted' || status === 'limited') startWatch();
+                            if (status === 'granted' || status === 'limited') startWatch();
                         })
                         .catch(() => {});
                 } else {
