@@ -497,7 +497,8 @@
             <div id="host-controls">
                 <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Join a Party</div>
                 <div class="flex gap-2">
-                    <input id="target-peer-id" maxlength="4" placeholder="Enter code"
+                    <input id="target-peer-id" maxlength="9" placeholder="XXXX-XXXX"
+                        oninput="(()=>{let v=this.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase().substring(0,8);this.value=v.length>4?v.slice(0,4)+'-'+v.slice(4):v;})()"
                         class="flex-1 text-center text-2xl font-black tracking-widest uppercase bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-2xl p-3 outline-none focus:border-brand dark:text-white">
                     <button onclick="app.multiplayer.joinParty()" class="px-5 bg-brand text-white rounded-2xl font-bold active:scale-95 shadow-md">
                         Join
@@ -540,9 +541,11 @@
             <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
                 <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Add a Friend</div>
                 <div class="flex gap-2">
-                    <input id="add-friend-code" maxlength="4" placeholder="Code" class="w-24 text-center text-lg font-black tracking-widest uppercase bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl p-2 outline-none focus:border-brand dark:text-white">
+                    <input id="add-friend-code" maxlength="9" placeholder="XXXX-XXXX"
+                        oninput="(()=>{let v=this.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase().substring(0,8);this.value=v.length>4?v.slice(0,4)+'-'+v.slice(4):v;})()"
+                        class="w-32 text-center text-sm font-black tracking-widest uppercase bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl p-2 outline-none focus:border-brand dark:text-white">
                     <input id="add-friend-name" placeholder="Nickname" class="flex-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand dark:text-white">
-                    <button onclick="(()=>{const c=document.getElementById('add-friend-code').value.trim().toUpperCase();const n=document.getElementById('add-friend-name').value.trim();if(c.length===4){app.multiplayer.saveFriend(c,n||c);app.multiplayer._renderSavedFriends();}})()" class="px-4 bg-brand text-white rounded-xl font-bold text-sm active:scale-95">Save</button>
+                    <button onclick="(()=>{const raw=document.getElementById('add-friend-code').value;const c=raw.replace(/[^A-Za-z0-9]/g,'').toUpperCase();const n=document.getElementById('add-friend-name').value.trim();if(c.length===8){app.multiplayer.saveFriend(c,n||raw);}})()" class="px-4 bg-brand text-white rounded-xl font-bold text-sm active:scale-95">Save</button>
                 </div>
             </div>
         </div>

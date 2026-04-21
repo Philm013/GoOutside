@@ -17,13 +17,60 @@ function makeApp(stateOverride = {}) {
     };
 }
 
+describe('multiplayer._generateCode()', () => {
+    test('returns 8-char uppercase alphanumeric', () => {
+        const mp = Object.create(multiplayer);
+        assert.match(mp._generateCode(), /^[A-Z0-9]{8}$/);
+    });
+    test('produces unique codes', () => {
+        const mp = Object.create(multiplayer);
+        const codes = new Set();
+        for (let i = 0; i < 30; i++) codes.add(mp._generateCode());
+        assert.ok(codes.size > 1);
+    });
+});
+
+describe('multiplayer._displayCode()', () => {
+    test('inserts dash at position 4', () => {
+        const mp = Object.create(multiplayer);
+        assert.equal(mp._displayCode('ABCD1234'), 'ABCD-1234');
+    });
+    test('returns fallback for null', () => {
+        const mp = Object.create(multiplayer);
+        assert.equal(mp._displayCode(null), '????-????');
+    });
+    test('short code returned as-is', () => {
+        const mp = Object.create(multiplayer);
+        assert.equal(mp._displayCode('AB12'), 'AB12');
+    });
+});
+
+describe('multiplayer._normalizeCode()', () => {
+    test('strips dashes and uppercases', () => {
+        const mp = Object.create(multiplayer);
+        assert.equal(mp._normalizeCode('abcd-1234'), 'ABCD1234');
+    });
+    test('strips spaces', () => {
+        const mp = Object.create(multiplayer);
+        assert.equal(mp._normalizeCode('ABCD 1234'), 'ABCD1234');
+    });
+    test('truncates to 8', () => {
+        const mp = Object.create(multiplayer);
+        assert.equal(mp._normalizeCode('ABCDEFGHIJKL'), 'ABCDEFGH');
+    });
+    test('handles null', () => {
+        const mp = Object.create(multiplayer);
+        assert.equal(mp._normalizeCode(null), '');
+    });
+});
+
 describe('multiplayer.init()', () => {
-    test('assigns a 4-char uppercase myId', () => {
+    test('assigns an 8-char uppercase myId', () => {
         const mp = Object.create(multiplayer);
         mp.init(makeApp());
         assert.equal(typeof mp.myId, 'string');
-        assert.equal(mp.myId.length, 4);
-        assert.match(mp.myId, /^[A-Z0-9]{4}$/);
+        assert.equal(mp.myId.length, 8);
+        assert.match(mp.myId, /^[A-Z0-9]{8}$/);
     });
 
     test('two calls produce different IDs with high probability', () => {
@@ -221,7 +268,7 @@ describe('multiplayer.broadcastJournalShare()', () => {
 
     test('sends via hostConnection when connected as peer', () => {
         const sent = [];
-        mp.hostConnection = { send(d) { sent.push(d); } };
+        mp.hostConnection = { open: true, send(d) { sent.push(d); } };
         mp.broadcastJournalShare({ speciesName: 'Sparrow' });
         assert.equal(sent.length, 1);
         assert.equal(mp._sent.length, 0); // broadcast() not called
@@ -229,28 +276,37 @@ describe('multiplayer.broadcastJournalShare()', () => {
 });
 
 describe('multiplayer.disconnect()', () => {
-    test('clears hostConnection', () => {
+    function makeMp() {
         const mp = Object.create(multiplayer);
-        mp.hostConnection = { close() {} };
-        mp.connections = [];
-        mp._posInterval = null;
+        mp._posInterval = null; mp._heartbeatInterval = null;
+        mp._healthCheckInterval = null; mp._presenceRefreshInterval = null;
+        mp._reconnectTimers = {}; mp._reconnectAttempts = {};
+        mp._presenceConns = {}; mp.connectionHealth = {};
         mp.app = makeApp();
-        mp.app.map.clearPlayers = () => {};
         mp.updateUI = () => {};
+        return mp;
+    }
+    test('clears hostConnection', () => {
+        const mp = makeMp();
+        mp.hostConnection = { close() {} }; mp.connections = [];
         mp.disconnect();
         assert.equal(mp.hostConnection, null);
     });
 
     test('clears connections array', () => {
-        const mp = Object.create(multiplayer);
+        const mp = makeMp();
         mp.hostConnection = null;
         mp.connections = [{ close() {} }, { close() {} }];
-        mp._posInterval = null;
-        mp.app = makeApp();
-        mp.app.map.clearPlayers = () => {};
-        mp.updateUI = () => {};
         mp.disconnect();
         assert.equal(mp.connections.length, 0);
+    });
+
+    test('cancels all reconnect timers', () => {
+        const mp = makeMp();
+        mp.hostConnection = null; mp.connections = [];
+        mp._reconnectTimers = { pA: setTimeout(() => {}, 99999) };
+        mp.disconnect();
+        assert.deepEqual(mp._reconnectTimers, {});
     });
 });
 
@@ -263,10 +319,15 @@ describe('multiplayer module structure', () => {
         const required = ['init', 'copyId', 'joinParty', 'disconnect', 'handleConn',
             'handleData', 'broadcast', 'broadcastPos', 'broadcastSighting',
             'broadcastJournalShare', 'sendGift', 'addToFeed', 'updateFeedUI',
-            'updateUI', 'updateList',
+            'updateUI', 'updateList', 'updatePresenceUI',
             'loadFriends', 'saveFriend', 'removeFriend', '_persistFriends',
-            'drainSyncQueue', 'switchPartyTab', 'renderPartyPanel',
-            'updateSessionDashboard', 'exportSession'];
+            'drainSyncQueue', 'syncWithFriend', 'switchPartyTab', 'renderPartyPanel',
+            'updateSessionDashboard', 'exportSession',
+            '_generateCode', '_displayCode', '_normalizeCode',
+            'startHeartbeat', 'stopHeartbeat', '_pingAll',
+            'startHealthCheck', 'stopHealthCheck', '_checkHealth', '_markHealth',
+            '_scheduleReconnect', '_cancelReconnect',
+            'probeAllFriends', 'startPresenceRefresh', '_probeOne', '_renderSavedFriends'];
         for (const m of required) {
             assert.equal(typeof multiplayer[m], 'function', `multiplayer.${m} is not a function`);
         }
@@ -283,6 +344,10 @@ describe('multiplayer module structure', () => {
     test('sessionData initializes as empty object', () => {
         assert.deepEqual(multiplayer.sessionData, {});
     });
+
+    test('connectionHealth initializes as empty object', () => {
+        assert.deepEqual(multiplayer.connectionHealth, {});
+    });
 });
 
 describe('multiplayer.loadFriends() / saveFriend() / removeFriend()', () => {
@@ -292,6 +357,10 @@ describe('multiplayer.loadFriends() / saveFriend() / removeFriend()', () => {
     beforeEach(() => {
         mp = Object.create(multiplayer);
         mp.friends = {};
+        mp._friendOnlineStatus = {};
+        mp._presenceConns = {};
+        mp._probeOne = () => {};
+        mp._renderSavedFriends = () => {};
         store = {};
         global.localStorage = {
             getItem: (k) => store[k] ?? null,
@@ -306,9 +375,9 @@ describe('multiplayer.loadFriends() / saveFriend() / removeFriend()', () => {
     });
 
     test('loadFriends() parses stored JSON friends', () => {
-        store['EDE_Friends'] = JSON.stringify({ AB12: { code: 'AB12', nickname: 'Alice', lastSeen: '2024-01-01' } });
+        store['EDE_Friends'] = JSON.stringify({ AB12CD34: { code: 'AB12CD34', nickname: 'Alice', lastSeen: '2024-01-01' } });
         mp.loadFriends();
-        assert.equal(mp.friends['AB12'].nickname, 'Alice');
+        assert.equal(mp.friends['AB12CD34'].nickname, 'Alice');
     });
 
     test('loadFriends() handles invalid JSON gracefully', () => {
@@ -317,33 +386,33 @@ describe('multiplayer.loadFriends() / saveFriend() / removeFriend()', () => {
         assert.deepEqual(mp.friends, {});
     });
 
-    test('saveFriend() adds friend to this.friends', () => {
-        mp.saveFriend('XY99', 'Bob');
-        assert.equal(mp.friends['XY99'].nickname, 'Bob');
-        assert.equal(mp.friends['XY99'].code, 'XY99');
+    test('saveFriend() normalizes 8-char code and adds friend', () => {
+        mp.saveFriend('XYZA-1234', 'Bob');
+        assert.equal(mp.friends['XYZA1234'].nickname, 'Bob');
+        assert.equal(mp.friends['XYZA1234'].code, 'XYZA1234');
     });
 
     test('saveFriend() persists to localStorage', () => {
-        mp.saveFriend('XY99', 'Bob');
+        mp.saveFriend('XYZA1234', 'Bob');
         const saved = JSON.parse(store['EDE_Friends']);
-        assert.equal(saved['XY99'].nickname, 'Bob');
+        assert.equal(saved['XYZA1234'].nickname, 'Bob');
     });
 
     test('removeFriend() removes from this.friends', () => {
-        mp.friends['XY99'] = { code: 'XY99', nickname: 'Bob', lastSeen: '' };
-        mp.removeFriend('XY99');
-        assert.equal(mp.friends['XY99'], undefined);
+        mp.friends['XYZA1234'] = { code: 'XYZA1234', nickname: 'Bob', lastSeen: '' };
+        mp.removeFriend('XYZA1234');
+        assert.equal(mp.friends['XYZA1234'], undefined);
     });
 
     test('removeFriend() persists removal to localStorage', () => {
-        mp.friends['XY99'] = { code: 'XY99', nickname: 'Bob', lastSeen: '' };
-        mp.removeFriend('XY99');
+        mp.friends['XYZA1234'] = { code: 'XYZA1234', nickname: 'Bob', lastSeen: '' };
+        mp.removeFriend('XYZA1234');
         const saved = JSON.parse(store['EDE_Friends'] || '{}');
-        assert.equal(saved['XY99'], undefined);
+        assert.equal(saved['XYZA1234'], undefined);
     });
 });
 
-describe('multiplayer.init() — persistent code', () => {
+describe('multiplayer.init() — persistent 8-char code', () => {
     let store;
 
     beforeEach(() => {
@@ -355,25 +424,33 @@ describe('multiplayer.init() — persistent code', () => {
         };
     });
 
-    test('saves generated code to localStorage on first init', () => {
+    test('saves generated 8-char code to localStorage on first init', () => {
         const mp = Object.create(multiplayer);
         mp.init(makeApp());
         assert.ok(store['EDE_MyCode']);
-        assert.match(store['EDE_MyCode'], /^[A-Z0-9]{4}$/);
+        assert.match(store['EDE_MyCode'], /^[A-Z0-9]{8}$/);
     });
 
-    test('reuses saved code from localStorage on subsequent init', () => {
+    test('reuses saved 8-char code from localStorage on subsequent init', () => {
+        store['EDE_MyCode'] = 'WXYZ1234';
+        const mp = Object.create(multiplayer);
+        mp.init(makeApp());
+        assert.equal(mp.myId, 'WXYZ1234');
+    });
+
+    test('rejects old 4-char codes and generates new 8-char one', () => {
         store['EDE_MyCode'] = 'WXYZ';
         const mp = Object.create(multiplayer);
         mp.init(makeApp());
-        assert.equal(mp.myId, 'WXYZ');
+        assert.equal(mp.myId.length, 8);
+        assert.notEqual(mp.myId, 'WXYZ');
     });
 
     test('generates new code if stored value is invalid', () => {
         store['EDE_MyCode'] = 'bad!';
         const mp = Object.create(multiplayer);
         mp.init(makeApp());
-        assert.match(mp.myId, /^[A-Z0-9]{4}$/);
+        assert.match(mp.myId, /^[A-Z0-9]{8}$/);
     });
 });
 
@@ -428,7 +505,7 @@ describe('multiplayer.drainSyncQueue()', () => {
 
     test('sends via hostConnection when connected as guest', () => {
         const sent = [];
-        mp.hostConnection = { send(d) { sent.push(d); } };
+        mp.hostConnection = { open: true, send(d) { sent.push(d); } };
         mp.drainSyncQueue();
         assert.equal(sent.length, 1);
         assert.equal(mp._sent.length, 0);
@@ -449,26 +526,26 @@ describe('multiplayer.handleData() — SYNC_BATCH', () => {
 
     test('populates sessionData for new explorer', () => {
         mp.handleData({ type: 'SYNC_BATCH', payload: {
-            username: 'Alice', avatar: '🦋', shortId: 'AB12',
+            username: 'Alice', avatar: '🦋', shortId: 'AB12CD34',
             observations: [{ speciesName: 'Robin', dp: 50 }]
         }});
-        assert.ok(mp.sessionData['AB12']);
-        assert.equal(mp.sessionData['AB12'].username, 'Alice');
-        assert.equal(mp.sessionData['AB12'].observations.length, 1);
+        assert.ok(mp.sessionData['AB12CD34']);
+        assert.equal(mp.sessionData['AB12CD34'].username, 'Alice');
+        assert.equal(mp.sessionData['AB12CD34'].observations.length, 1);
     });
 
     test('appends observations for existing explorer', () => {
-        mp.sessionData['AB12'] = { username: 'Alice', avatar: '🦋', shortId: 'AB12', observations: [{ speciesName: 'Hawk' }], lastSeen: '' };
+        mp.sessionData['AB12CD34'] = { username: 'Alice', avatar: '🦋', shortId: 'AB12CD34', observations: [{ speciesName: 'Hawk' }], lastSeen: '' };
         mp.handleData({ type: 'SYNC_BATCH', payload: {
-            username: 'Alice', avatar: '🦋', shortId: 'AB12',
+            username: 'Alice', avatar: '🦋', shortId: 'AB12CD34',
             observations: [{ speciesName: 'Robin' }]
         }});
-        assert.equal(mp.sessionData['AB12'].observations.length, 2);
+        assert.equal(mp.sessionData['AB12CD34'].observations.length, 2);
     });
 
     test('shows toast with synced count', () => {
         mp.handleData({ type: 'SYNC_BATCH', payload: {
-            username: 'Bob', avatar: '🐝', shortId: 'CD34',
+            username: 'Bob', avatar: '🐝', shortId: 'CD34EF56',
             observations: [{ speciesName: 'Fox' }, { speciesName: 'Deer' }]
         }});
         assert.ok(mp.app._toasts.some(t => t.includes('2') && t.includes('Bob')));
@@ -478,7 +555,7 @@ describe('multiplayer.handleData() — SYNC_BATCH', () => {
         let called = false;
         mp.updateSessionDashboard = () => { called = true; };
         mp.handleData({ type: 'SYNC_BATCH', payload: {
-            username: 'Carol', avatar: '🌿', shortId: 'EF56',
+            username: 'Carol', avatar: '🌿', shortId: 'EF56GH78',
             observations: []
         }});
         assert.ok(called);
@@ -541,9 +618,223 @@ describe('multiplayer.renderPartyPanel()', () => {
         mp.app = makeApp();
         mp._renderSavedFriends = () => {};
         mp.updateSessionDashboard = () => {};
+        mp.updateList = () => {};
         global.document = { getElementById: () => null };
         global.localStorage = { getItem: () => null, setItem: () => {} };
         assert.doesNotThrow(() => mp.renderPartyPanel());
+    });
+});
+
+// ─────────────────────────────────────────────
+// Heartbeat
+// ─────────────────────────────────────────────
+describe('multiplayer heartbeat', () => {
+    test('stopHeartbeat clears interval', () => {
+        const mp = Object.create(multiplayer);
+        mp._heartbeatInterval = setInterval(() => {}, 99999);
+        mp.stopHeartbeat();
+        assert.equal(mp._heartbeatInterval, null);
+    });
+    test('startHeartbeat sets interval', () => {
+        const mp = Object.create(multiplayer);
+        mp._heartbeatInterval = null;
+        mp.connections = []; mp.hostConnection = null; mp.peer = null;
+        mp.startHeartbeat();
+        assert.notEqual(mp._heartbeatInterval, null);
+        mp.stopHeartbeat();
+    });
+});
+
+// ─────────────────────────────────────────────
+// Health monitoring
+// ─────────────────────────────────────────────
+describe('multiplayer._checkHealth()', () => {
+    let mp;
+    beforeEach(() => {
+        mp = Object.create(multiplayer);
+        mp.connectionHealth = {};
+        mp.hostConnection = null;
+        mp.app = makeApp();
+        mp.updateList = () => {};
+        mp.updatePresenceUI = () => {};
+    });
+    test('recent pong stays connected', () => {
+        mp.connectionHealth['p1'] = { lastPong: Date.now() - 5000, status: 'connected', reconnects: 0 };
+        mp._checkHealth();
+        assert.equal(mp.connectionHealth['p1'].status, 'connected');
+    });
+    test('30-60s pong becomes degraded', () => {
+        mp.connectionHealth['p2'] = { lastPong: Date.now() - 35000, status: 'connected', reconnects: 0 };
+        mp._checkHealth();
+        assert.equal(mp.connectionHealth['p2'].status, 'degraded');
+    });
+    test('>60s pong becomes disconnected', () => {
+        mp.connectionHealth['p3'] = { lastPong: Date.now() - 65000, status: 'connected', reconnects: 0 };
+        mp._scheduleReconnect = () => {};
+        mp._checkHealth();
+        assert.equal(mp.connectionHealth['p3'].status, 'disconnected');
+    });
+    test('no lastPong skipped', () => {
+        mp.connectionHealth['p4'] = { status: 'connected', reconnects: 0 };
+        assert.doesNotThrow(() => mp._checkHealth());
+        assert.equal(mp.connectionHealth['p4'].status, 'connected');
+    });
+});
+
+describe('multiplayer._markHealth()', () => {
+    test('creates entry if absent', () => {
+        const mp = Object.create(multiplayer);
+        mp.connectionHealth = {};
+        mp._markHealth('px', { status: 'connected', lastPong: 12345 });
+        assert.equal(mp.connectionHealth['px'].status, 'connected');
+        assert.equal(mp.connectionHealth['px'].lastPong, 12345);
+    });
+    test('merges into existing entry', () => {
+        const mp = Object.create(multiplayer);
+        mp.connectionHealth = { py: { status: 'degraded', reconnects: 2 } };
+        mp._markHealth('py', { status: 'connected', latency: 45 });
+        assert.equal(mp.connectionHealth['py'].reconnects, 2);
+        assert.equal(mp.connectionHealth['py'].latency, 45);
+    });
+});
+
+// ─────────────────────────────────────────────
+// Auto-reconnect
+// ─────────────────────────────────────────────
+describe('multiplayer._scheduleReconnect()', () => {
+    test('schedules a reconnect timer', () => {
+        const mp = Object.create(multiplayer);
+        mp._reconnectTimers = {}; mp._reconnectAttempts = {};
+        mp.app = makeApp();
+        mp._getLastPartyCode = () => 'ABCD1234';
+        mp._reconnectTo = () => {};
+        mp._scheduleReconnect('px', 0);
+        assert.ok(mp._reconnectTimers['px']);
+        clearTimeout(mp._reconnectTimers['px']);
+    });
+    test('shows manual toast at max attempts', () => {
+        const mp = Object.create(multiplayer);
+        mp._reconnectTimers = {}; mp._reconnectAttempts = {};
+        mp.app = makeApp();
+        mp._scheduleReconnect('px', 5);
+        assert.ok(mp.app._toasts.some(t => t.toLowerCase().includes('manually')));
+    });
+});
+
+describe('multiplayer._cancelReconnect()', () => {
+    test('clears and removes timer', () => {
+        const mp = Object.create(multiplayer);
+        mp._reconnectTimers = { pA: setTimeout(() => {}, 99999) };
+        mp._cancelReconnect('pA');
+        assert.equal(mp._reconnectTimers['pA'], undefined);
+    });
+    test('no-op when absent', () => {
+        const mp = Object.create(multiplayer);
+        mp._reconnectTimers = {};
+        assert.doesNotThrow(() => mp._cancelReconnect('nope'));
+    });
+});
+
+// ─────────────────────────────────────────────
+// PING / PONG
+// ─────────────────────────────────────────────
+describe('multiplayer.handleData() PING/PONG', () => {
+    let mp, sent;
+    beforeEach(() => {
+        mp = Object.create(multiplayer);
+        mp.socialFeed = []; mp.friendsData = {}; mp.connectionHealth = {};
+        sent = [];
+        mp.hostConnection = { open: true, send: (d) => sent.push(d) };
+        mp.connections = [];
+        mp.app = makeApp();
+        mp.updateFeedUI = () => {}; mp.updateList = () => {}; mp.updateAdminTable = () => {};
+    });
+    test('PING triggers PONG reply', () => {
+        mp.handleData({ type: 'PING', payload: { id: 'EDE8-ABCD1234', ts: 1000000 } });
+        assert.ok(sent.some(d => d.type === 'PONG'));
+    });
+    test('PONG echoes ts from PING', () => {
+        mp.handleData({ type: 'PING', payload: { id: 'EDE8-ABCD1234', ts: 9999 } });
+        const pong = sent.find(d => d.type === 'PONG');
+        assert.equal(pong.payload.ts, 9999);
+    });
+    test('PONG updates health with latency', () => {
+        const now = Date.now();
+        mp.handleData({ type: 'PONG', payload: { id: 'EDE8-ABCD1234', ts: now - 50 } });
+        const health = mp.connectionHealth['EDE8-ABCD1234'];
+        assert.ok(health);
+        assert.ok(health.latency >= 0);
+    });
+});
+
+// ─────────────────────────────────────────────
+// Presence
+// ─────────────────────────────────────────────
+describe('multiplayer.handleConn() presence label', () => {
+    test('presence conn NOT added to connections array', () => {
+        const mp = Object.create(multiplayer);
+        mp.connections = []; mp.connectionHealth = {};
+        mp._markHealth = () => {}; mp.updateUI = () => {};
+        const conn = { label: 'presence', peer: 'EDE8-XYZW5678', on(e, fn) {}, send() {} };
+        mp.handleConn(conn);
+        assert.equal(mp.connections.length, 0);
+    });
+    test('party conn (no label) added to connections', () => {
+        const mp = Object.create(multiplayer);
+        mp.connections = []; mp.connectionHealth = {};
+        mp._markHealth = () => {}; mp.updateUI = () => {}; mp.updateList = () => {};
+        const conn = { label: undefined, peer: 'EDE8-XYZW5678', on(e, fn) {}, send() {} };
+        mp.handleConn(conn);
+        assert.equal(mp.connections.length, 1);
+    });
+});
+
+describe('multiplayer.probeAllFriends()', () => {
+    test('calls _probeOne for each 8-char friend', () => {
+        const mp = Object.create(multiplayer);
+        mp.peer = { id: 'EDE8-ABCD1234', destroyed: false };
+        mp.friends = { 'ABCD1234': { code: 'ABCD1234' }, 'EFGH5678': { code: 'EFGH5678' } };
+        const probed = [];
+        mp._probeOne = (c) => probed.push(c);
+        mp.probeAllFriends();
+        assert.ok(probed.includes('ABCD1234'));
+        assert.ok(probed.includes('EFGH5678'));
+    });
+    test('skips when peer null', () => {
+        const mp = Object.create(multiplayer);
+        mp.peer = null;
+        mp.friends = { 'ABCD1234': { code: 'ABCD1234' } };
+        const probed = [];
+        mp._probeOne = (c) => probed.push(c);
+        mp.probeAllFriends();
+        assert.equal(probed.length, 0);
+    });
+});
+
+describe('multiplayer.syncWithFriend()', () => {
+    test('no-op when friend not connected', () => {
+        const mp = Object.create(multiplayer);
+        mp.connections = []; mp._presenceConns = {};
+        mp.app = makeApp({ syncQueue: [{ speciesName: 'Robin' }] });
+        assert.doesNotThrow(() => mp.syncWithFriend('ABCD1234'));
+    });
+    test('sends SYNC_BATCH when friend conn open', () => {
+        const mp = Object.create(multiplayer);
+        mp.connections = [];
+        const sent = [];
+        mp._presenceConns = { 'ABCD1234': { open: true, peer: 'EDE8-ABCD1234', send: (d) => sent.push(d) } };
+        mp.app = makeApp({ syncQueue: [{ speciesName: 'Robin' }] });
+        mp.syncWithFriend('ABCD1234');
+        assert.equal(sent.length, 1);
+        assert.equal(sent[0].type, 'SYNC_BATCH');
+    });
+    test('clears syncQueue after sending', () => {
+        const mp = Object.create(multiplayer);
+        mp.connections = [];
+        mp._presenceConns = { 'ABCD1234': { open: true, peer: 'EDE8-ABCD1234', send: () => {} } };
+        mp.app = makeApp({ syncQueue: [{ speciesName: 'Robin' }] });
+        mp.syncWithFriend('ABCD1234');
+        assert.deepEqual(mp.app.state.syncQueue, []);
     });
 });
 

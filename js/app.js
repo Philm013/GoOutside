@@ -1,12 +1,12 @@
-import { haptics } from './haptics.js?v=20260421b';
-import { hud } from './hud.js?v=20260421b';
-import { ui } from './ui.js?v=20260421b';
-import { data } from './data.js?v=20260421b';
-import { map } from './map.js?v=20260421b';
-import { inat } from './inat.js?v=20260421b';
-import { identify } from './identify.js?v=20260421b';
-import { journal } from './journal.js?v=20260421b';
-import { multiplayer } from './multiplayer.js?v=20260421b';
+import { haptics } from './haptics.js?v=20260421c';
+import { hud } from './hud.js?v=20260421c';
+import { ui } from './ui.js?v=20260421c';
+import { data } from './data.js?v=20260421c';
+import { map } from './map.js?v=20260421c';
+import { inat } from './inat.js?v=20260421c';
+import { identify } from './identify.js?v=20260421c';
+import { journal } from './journal.js?v=20260421c';
+import { multiplayer } from './multiplayer.js?v=20260421c';
 
 const app = {
     state: {},
