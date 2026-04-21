@@ -175,6 +175,133 @@ describe('data.checkBadges()', () => {
     test('all 34 badges defined', () => {
         assert.equal(data.BADGES.length, 34);
     });
+
+    // ── New taxa badges ────────────────────────────────────────────
+
+    test('awards reptile_3 badge with 3 Reptilia', () => {
+        const catalogue = { 1: { iconic: 'Reptilia' }, 2: { iconic: 'Reptilia' }, 3: { iconic: 'Reptilia' } };
+        const s = { observations: [], catalogue, streak: 0, badges: [] };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'reptile_3'));
+    });
+
+    test('does not award reptile_3 with only 2', () => {
+        const catalogue = { 1: { iconic: 'Reptilia' }, 2: { iconic: 'Reptilia' } };
+        const s = { observations: [], catalogue, streak: 0, badges: [] };
+        assert.ok(!data.checkBadges(s).some(b => b.id === 'reptile_3'));
+    });
+
+    test('awards amphibian_3 with 3 Amphibia', () => {
+        const catalogue = { 1: { iconic: 'Amphibia' }, 2: { iconic: 'Amphibia' }, 3: { iconic: 'Amphibia' } };
+        const s = { observations: [], catalogue, streak: 0, badges: [] };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'amphibian_3'));
+    });
+
+    test('awards fish_5 with 5 Actinopterygii', () => {
+        const catalogue = {};
+        for (let i = 0; i < 5; i++) catalogue[i] = { iconic: 'Actinopterygii' };
+        const s = { observations: [], catalogue, streak: 0, badges: [] };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'fish_5'));
+    });
+
+    test('awards shell_5 with 5 Mollusca', () => {
+        const catalogue = {};
+        for (let i = 0; i < 5; i++) catalogue[i] = { iconic: 'Mollusca' };
+        const s = { observations: [], catalogue, streak: 0, badges: [] };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'shell_5'));
+    });
+
+    test('awards fungi_5 with 5 Fungi', () => {
+        const catalogue = {};
+        for (let i = 0; i < 5; i++) catalogue[i] = { iconic: 'Fungi' };
+        const s = { observations: [], catalogue, streak: 0, badges: [] };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'fungi_5'));
+    });
+
+    test('awards arachnid_3 with 3 Arachnida', () => {
+        const catalogue = { 1: { iconic: 'Arachnida' }, 2: { iconic: 'Arachnida' }, 3: { iconic: 'Arachnida' } };
+        const s = { observations: [], catalogue, streak: 0, badges: [] };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'arachnid_3'));
+    });
+
+    test('awards all_10_taxa with all 10 iconic groups', () => {
+        const iconics = ['Aves','Plantae','Mammalia','Insecta','Reptilia','Amphibia','Actinopterygii','Mollusca','Arachnida','Fungi'];
+        const catalogue = {};
+        iconics.forEach((ic, i) => { catalogue[i] = { iconic: ic }; });
+        const s = { observations: [], catalogue, streak: 0, badges: [] };
+        const awarded = data.checkBadges(s);
+        assert.ok(awarded.some(b => b.id === 'all_10_taxa'));
+    });
+
+    test('does not award all_10_taxa with only 9 groups', () => {
+        const iconics = ['Aves','Plantae','Mammalia','Insecta','Reptilia','Amphibia','Actinopterygii','Mollusca','Arachnida'];
+        const catalogue = {};
+        iconics.forEach((ic, i) => { catalogue[i] = { iconic: ic }; });
+        const s = { observations: [], catalogue, streak: 0, badges: [] };
+        assert.ok(!data.checkBadges(s).some(b => b.id === 'all_10_taxa'));
+    });
+
+    // ── Quality badges ─────────────────────────────────────────────
+
+    test('awards rare_find when an observation has rarity Rare', () => {
+        const s = { observations: [{ rarity: 'Common' }, { rarity: 'Rare' }], catalogue: {}, streak: 0, badges: [] };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'rare_find'));
+    });
+
+    test('does not award rare_find with only Common/Uncommon', () => {
+        const s = { observations: [{ rarity: 'Common' }, { rarity: 'Uncommon' }], catalogue: {}, streak: 0, badges: [] };
+        assert.ok(!data.checkBadges(s).some(b => b.id === 'rare_find'));
+    });
+
+    test('awards photo_logger when an observation has imageUri', () => {
+        const s = { observations: [{ imageUri: 'file://photo.jpg' }], catalogue: {}, streak: 0, badges: [] };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'photo_logger'));
+    });
+
+    test('does not award photo_logger with no imageUri', () => {
+        const s = { observations: [{ rarity: 'Common' }], catalogue: {}, streak: 0, badges: [] };
+        assert.ok(!data.checkBadges(s).some(b => b.id === 'photo_logger'));
+    });
+
+    // ── Multiplayer badges ─────────────────────────────────────────
+
+    test('awards first_party when _joinedParty is true', () => {
+        const s = { observations: [], catalogue: {}, streak: 0, badges: [], _joinedParty: true };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'first_party'));
+    });
+
+    test('does not award first_party when _joinedParty is false', () => {
+        const s = { observations: [], catalogue: {}, streak: 0, badges: [] };
+        assert.ok(!data.checkBadges(s).some(b => b.id === 'first_party'));
+    });
+
+    test('awards gift_sender when _sentGift is true', () => {
+        const s = { observations: [], catalogue: {}, streak: 0, badges: [], _sentGift: true };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'gift_sender'));
+    });
+
+    test('awards party_sighting when _sharedSighting is true', () => {
+        const s = { observations: [], catalogue: {}, streak: 0, badges: [], _sharedSighting: true };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'party_sighting'));
+    });
+
+    // ── Milestone badges ───────────────────────────────────────────
+
+    test('awards obs_250 at 250 observations', () => {
+        const s = { observations: Array(250).fill({}), catalogue: {}, streak: 0, badges: [] };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'obs_250'));
+    });
+
+    test('does not award obs_250 at 249', () => {
+        const s = { observations: Array(249).fill({}), catalogue: {}, streak: 0, badges: [] };
+        assert.ok(!data.checkBadges(s).some(b => b.id === 'obs_250'));
+    });
+
+    test('awards spp_100 at 100 catalogued species', () => {
+        const catalogue = {};
+        for (let i = 0; i < 100; i++) catalogue[i] = { iconic: 'Aves' };
+        const s = { observations: [], catalogue, streak: 0, badges: [] };
+        assert.ok(data.checkBadges(s).some(b => b.id === 'spp_100'));
+    });
 });
 
 describe('data.updateStreak()', () => {

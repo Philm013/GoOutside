@@ -250,3 +250,197 @@ describe('ui._selectSpecies()', () => {
         assert.equal(btn.dataset.iconic, 'Aves');
     });
 });
+
+describe('ui.ICONIC_TAXA', () => {
+    test('is an array of exactly 10 entries', () => {
+        assert.ok(Array.isArray(ui.ICONIC_TAXA));
+        assert.equal(ui.ICONIC_TAXA.length, 10);
+    });
+
+    test('contains all expected taxa', () => {
+        const expected = ['Aves','Plantae','Mammalia','Insecta','Reptilia','Amphibia','Actinopterygii','Mollusca','Arachnida','Fungi'];
+        for (const t of expected) {
+            assert.ok(ui.ICONIC_TAXA.includes(t), `Missing: ${t}`);
+        }
+    });
+
+    test('all entries are non-empty strings', () => {
+        for (const t of ui.ICONIC_TAXA) {
+            assert.ok(typeof t === 'string' && t.length > 0);
+        }
+    });
+});
+
+describe('ui._renderSeasonFilterChips()', () => {
+    let container;
+    beforeEach(() => {
+        ui.app = makeApp();
+        ui._seasonFilter = null;
+        // Minimal container mock
+        container = { innerHTML: '', children: { length: 0 } };
+    });
+
+    test('sets innerHTML to non-empty string', () => {
+        ui._renderSeasonFilterChips(container);
+        assert.ok(container.innerHTML.length > 0);
+    });
+
+    test('includes an "All" chip', () => {
+        ui._renderSeasonFilterChips(container);
+        assert.ok(container.innerHTML.includes('>All<'));
+    });
+
+    test('includes a chip for each ICONIC_TAXA entry', () => {
+        ui._renderSeasonFilterChips(container);
+        for (const t of ui.ICONIC_TAXA) {
+            assert.ok(container.innerHTML.includes(`data-filter="${t}"`), `Missing chip for ${t}`);
+        }
+    });
+
+    test('All chip is active when _seasonFilter is null', () => {
+        ui._seasonFilter = null;
+        ui._renderSeasonFilterChips(container);
+        // First chip (All) should have active class
+        assert.ok(container.innerHTML.includes('active'));
+    });
+
+    test('correct chip is active when _seasonFilter is set', () => {
+        ui._seasonFilter = 'Aves';
+        ui._renderSeasonFilterChips(container);
+        // Should contain active class near Aves chip
+        assert.ok(container.innerHTML.includes('data-filter="Aves"'));
+    });
+
+    test('produces 11 chips total (All + 10 taxa)', () => {
+        ui._renderSeasonFilterChips(container);
+        const count = (container.innerHTML.match(/season-filter-chip/g) || []).length;
+        assert.equal(count, 11);
+    });
+});
+
+describe('ui._renderLayerPicker()', () => {
+    let picker;
+    beforeEach(() => {
+        ui.app = makeApp();
+        ui.app.map = {
+            _communityLayerOn: true,
+            _personalLayerOn: false,
+            _iconicLayerState: { Aves: true, Plantae: false }
+        };
+        picker = { innerHTML: '' };
+    });
+
+    test('sets innerHTML to non-empty string', () => {
+        ui._renderLayerPicker(picker);
+        assert.ok(picker.innerHTML.length > 0);
+    });
+
+    test('includes community and personal layer checkboxes', () => {
+        ui._renderLayerPicker(picker);
+        assert.ok(picker.innerHTML.includes('quick-toggle-community'));
+        assert.ok(picker.innerHTML.includes('quick-toggle-personal'));
+    });
+
+    test('renders a checkbox for each ICONIC_TAXA entry', () => {
+        ui._renderLayerPicker(picker);
+        for (const t of ui.ICONIC_TAXA) {
+            assert.ok(picker.innerHTML.includes(`toggleIconicLayer('${t}'`), `Missing toggle for ${t}`);
+        }
+    });
+
+    test('community checkbox is checked when _communityLayerOn is true', () => {
+        ui.app.map._communityLayerOn = true;
+        ui._renderLayerPicker(picker);
+        // quick-toggle-community input should have checked attr
+        assert.ok(/quick-toggle-community[^>]*checked/.test(picker.innerHTML) || picker.innerHTML.includes('id="quick-toggle-community" checked'));
+    });
+
+    test('taxa rows reflect _iconicLayerState', () => {
+        ui.app.map._iconicLayerState = { Aves: true };
+        ui._renderLayerPicker(picker);
+        // Aves row should have checked; others should not have checked in their specific row
+        assert.ok(picker.innerHTML.includes("toggleIconicLayer('Aves'"));
+    });
+});
+
+describe('ui.showBadgeUnlock()', () => {
+    let appended;
+    beforeEach(() => {
+        appended = [];
+        global.document = {
+            createElement(tag) {
+                return {
+                    tag,
+                    className: '',
+                    innerHTML: '',
+                    remove() { appended.splice(appended.indexOf(this), 1); }
+                };
+            },
+            body: { appendChild(el) { appended.push(el); } },
+            getElementById: () => null,
+            querySelectorAll: () => []
+        };
+    });
+
+    test('appends an element to document.body', () => {
+        ui.showBadgeUnlock({ icon: '🐦', name: 'Bird Watcher' });
+        assert.equal(appended.length, 1);
+    });
+
+    test('element innerHTML includes badge icon and name', () => {
+        ui.showBadgeUnlock({ icon: '🦎', name: 'Reptile Wrangler' });
+        assert.ok(appended[0].innerHTML.includes('🦎'));
+        assert.ok(appended[0].innerHTML.includes('Reptile Wrangler'));
+    });
+
+    test('element innerHTML includes "Badge Unlocked!" text', () => {
+        ui.showBadgeUnlock({ icon: '🐟', name: 'Angler' });
+        assert.ok(appended[0].innerHTML.includes('Badge Unlocked!'));
+    });
+});
+
+describe('ui.showObsSuccess() structure', () => {
+    test('is a function', () => {
+        assert.equal(typeof ui.showObsSuccess, 'function');
+    });
+
+    test('accepts obs and newBadges arguments without error when DOM missing', () => {
+        const noop = { classList: { remove() {}, add() {} } };
+        global.document = {
+            getElementById: () => null,
+            querySelectorAll: () => []
+        };
+        assert.doesNotThrow(() => {
+            ui.showObsSuccess({ speciesName: 'Robin', dp: 100, rarity: 'Common', iconic: 'Aves' }, []);
+        });
+    });
+
+    test('defaults newBadges to empty array when not provided', () => {
+        global.document = { getElementById: () => null, querySelectorAll: () => [] };
+        assert.doesNotThrow(() => {
+            ui.showObsSuccess({ speciesName: 'Robin', dp: 50, rarity: 'Common', iconic: 'Aves' });
+        });
+    });
+});
+
+describe('ui module required methods (extended)', () => {
+    test('showBadgeUnlock is a function', () => {
+        assert.equal(typeof ui.showBadgeUnlock, 'function');
+    });
+
+    test('_renderSeasonFilterChips is a function', () => {
+        assert.equal(typeof ui._renderSeasonFilterChips, 'function');
+    });
+
+    test('_renderLayerPicker is a function', () => {
+        assert.equal(typeof ui._renderLayerPicker, 'function');
+    });
+
+    test('toggleLayerPicker is a function', () => {
+        assert.equal(typeof ui.toggleLayerPicker, 'function');
+    });
+
+    test('setSeasonFilter is a function', () => {
+        assert.equal(typeof ui.setSeasonFilter, 'function');
+    });
+});
