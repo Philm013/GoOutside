@@ -87,10 +87,6 @@ export const multiplayer = {
             if (this.app.ui) {
                 this.app.ui.showToast(`${d.payload.from} sent you a gift! 🎁`);
                 this.addToFeed({ type: 'gift', user: d.payload.from, item: d.payload.giftName, icon: 'card_giftcard' });
-                if (d.payload.giftType === 'seeds') {
-                    this.app.state.seeds += d.payload.amount;
-                    this.app.ui.renderProfile();
-                }
                 this.app.saveState();
             }
         } else if (d.type === 'JOURNAL_SHARE') {
@@ -136,6 +132,10 @@ export const multiplayer = {
         const connCtr = document.getElementById('connected-controls');
         if (hostCtr) hostCtr.classList.toggle('hidden', active);
         if (connCtr) connCtr.classList.toggle('hidden', !active);
+
+        // Top-bar party presence badge
+        const hudBadge = document.getElementById('hud-party-badge');
+        if (hudBadge) hudBadge.classList.toggle('hidden', !active);
         
         const playerCount = document.getElementById('player-count');
         const badgeCount = document.getElementById('player-count-badge');

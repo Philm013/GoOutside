@@ -6,6 +6,17 @@ export const hud = {
         this.app = app;
         this.initCompass();
         this._initHomeSheet();
+        this._initFullscreenVisibility();
+    },
+
+    _initFullscreenVisibility() {
+        // Hide fullscreen button when running as installed PWA (standalone mode)
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+            || window.navigator.standalone === true;
+        if (isStandalone) {
+            const btn = document.getElementById('hud-fullscreen-btn');
+            if (btn) btn.style.display = 'none';
+        }
     },
 
     async initCompass() {

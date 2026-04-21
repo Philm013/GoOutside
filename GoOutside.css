@@ -342,3 +342,7 @@ body, html {
     pointer-events: auto; max-width: 300px; text-align: center;
 }
 .toast-message.show { opacity: 1; transform: translateY(0); }
+/* --- PWA STANDALONE: hide fullscreen button --- */
+@media (display-mode: standalone) {
+    #hud-fullscreen-btn { display: none !important; }
+}
