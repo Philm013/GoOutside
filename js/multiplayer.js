@@ -307,8 +307,8 @@ export const multiplayer = {
         }
         this.connections.push(conn);
         this._markHealth(conn.peer, { status: 'connected', lastPong: Date.now() });
-        conn.on('open', () => this._sendIntro(conn));
-        this._sendIntro(conn);
+        if (conn.open) this._sendIntro(conn);
+        else conn.on('open', () => this._sendIntro(conn));
         conn.on('data', d => {
             this._markHealth(conn.peer, { lastActivity: Date.now() });
             if (!this.hostConnection) this.broadcast(d, conn.peer);

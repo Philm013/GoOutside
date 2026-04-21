@@ -232,6 +232,7 @@ const app = {
 
     // Request geolocation with timeout; resolves null on error/timeout
     async _getLocation() {
+        const NATIVE_LOCATION_TIMEOUT_MS = 8000;
         const nativeGeo = this._nativeGeoPlugin();
         if (nativeGeo) {
             try {
@@ -242,8 +243,8 @@ const app = {
                 }
                 if (typeof nativeGeo.getCurrentPosition === 'function') {
                     const p = await Promise.race([
-                        nativeGeo.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('location timeout')), 8000))
+                        nativeGeo.getCurrentPosition({ enableHighAccuracy: true, timeout: NATIVE_LOCATION_TIMEOUT_MS, maximumAge: 10000 }),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('location timeout')), NATIVE_LOCATION_TIMEOUT_MS))
                     ]);
                     if (p && p.coords) return { lat: p.coords.latitude, lng: p.coords.longitude };
                 }
